@@ -3,6 +3,9 @@
    低饱和柔和护眼 · 大量留白 · 全局统一交互反馈
 ================================================ */
 
+/* 移动端基础优化：消除 iOS/Android 点击灰闪、禁止文字自动缩放 */
+html{ -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
 :root{
   /* 全局字体缩放系数（设置页调节，html 的 zoom 会整体缩放，含弹窗） */
   --font-scale: 1;

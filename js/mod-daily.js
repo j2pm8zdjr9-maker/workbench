@@ -815,6 +815,7 @@
       },
       del: function (t) {
         var x = D().tasks.filter(function (a) { return a.id === t.dataset.id; })[0];
+        if (!x) return;
         UI.del(x.title, function () {
           D().tasks = D().tasks.filter(function (a) { return a.id !== x.id; });
           Store.save(); App.refresh();
@@ -822,6 +823,7 @@
       },
       done: function (t) {
         var x = D().tasks.filter(function (a) { return a.id === t.dataset.id; })[0];
+        if (!x) return;
         if (x.status === 'done') { x.status = 'todo'; x.doneAt = ''; }
         else {
           x.status = 'done'; x.doneAt = U.today();
@@ -829,7 +831,7 @@
             var nd = nextDue(x.due, x.repeat);
             D().tasks.push({
               id: U.uid(), title: x.title, desc: x.desc, prio: x.prio, tag: x.tag,
-              due: nd, repeat: x.repeat, status: 'todo', created: U.today(),
+              due: nd, repeat: x.repeat, status: 'todo', created: nd,
               subs: (x.subs || []).map(function (s) { return { id: U.uid(), t: s.t, done: false }; })
             });
             U.toast('已完成，下一周期任务已生成（' + U.fmtDate(nd) + '）');
@@ -839,6 +841,7 @@
       },
       doing: function (t) {
         var x = D().tasks.filter(function (a) { return a.id === t.dataset.id; })[0];
+        if (!x) return;
         x.status = 'doing'; Store.save(); App.refresh();
       },
       arch: function (t) {

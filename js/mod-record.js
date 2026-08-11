@@ -84,7 +84,7 @@
     var p = num(x.page) || 0, total = num(x.pages);
     if (!p && !total) return '';
     var txt = '📄 ' + p + (total ? ' / ' + total : '') + ' 页';
-    if (total) txt += ' · ' + Math.round(p / total * 100) + '%';
+    if (total) txt += ' · ' + Math.min(100, Math.round(p / total * 100)) + '%';
     return '<span class="badge grey">' + txt + '</span>';
   }
   function addReadLog(id) {
@@ -129,7 +129,7 @@
             '<button class="btn primary sm tap" data-act="new">+ 添加' + MT[type].t + '</button>',
           body: this.filters(arr) + '<div style="margin-top:18px">' + this.list(arr) + '</div>'
         }) +
-        this.yearly(arr, type) +
+        this.yearly(D().media, type) +
         Cal.card({
           modId: 'media', title: '📅 媒体日历', sub: '数字 = 当天开始的作品数，点日期查看当天',
           cell: function (date) { return D().media.filter(function (x) { return x.start === date; }).length; },
