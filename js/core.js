@@ -306,7 +306,18 @@
         if (cm && cm.leave) cm.leave();
       }
       this.current = id;
+      if (id !== 'home') {
+        var rc = Store.data.ui.recent || (Store.data.ui.recent = []);
+        rc = rc.filter(function (x) { return x !== id; });
+        rc.unshift(id);
+        if (rc.length > 5) rc = rc.slice(0, 5);
+        Store.data.ui.recent = rc;
+      }
+      this.renderNav(); // 重绘侧栏以更新「常用」分组
       Store.data.ui.last = id;
+      // 离开搜索态：清空侧栏模块过滤
+      var ns = document.getElementById('navSearch');
+      if (ns && ns.value) { ns.value = ''; this.filterNav(''); }
       Store.save(true);
       if (!noHash && location.hash !== '#' + id) { location.hash = '#' + id; }
       this.paint();
@@ -396,7 +407,16 @@
       var self = this;
       var html = '';
       if (self.modules['home']) {
-        html += '<button class="nav-item tap' + (self.current === 'home' ? ' on' : '') + '" data-id="home"><span class="ni">🏠</span><span class="nt">首页总览</span></button>';
+        html += '<button class="nav-item tap' + (self.current === 'home' ? ' on' : '') + '" data-id="home" data-name="首页总览 home"><span class="ni">🏠</span><span class="nt">首页总览</span></button>';
+      }
+      // 常用：最近使用过的模块置顶
+      var recent = (Store.data.ui.recent || []).filter(function (id) { return self.modules[id] && id !== 'home'; });
+      if (recent.length) {
+        html += '<div class="nav-group">常用</div>';
+        recent.forEach(function (id) {
+          var m = self.modules[id];
+          html += '<button class="nav-item tap" data-id="' + id + '" data-name="' + esc(m.name) + ' ' + id + '"><span class="ni">' + m.icon + '</span><span class="nt">' + esc(m.name) + '</span></button>';
+        });
       }
       var groups = [
         { t: '日常', ids: ['checkin', 'tasks', 'worklog'] },
@@ -408,9 +428,10 @@
       groups.forEach(function (g) {
         html += '<div class="nav-group">' + g.t + '</div>';
         g.ids.forEach(function (id) {
+          if (recent.indexOf(id) >= 0) return; // 已在「常用」置顶，原分组不再重复
           var m = self.modules[id];
           if (!m) return;
-          html += '<button class="nav-item tap" data-id="' + id + '"><span class="ni">' + m.icon + '</span><span class="nt">' + esc(m.name) + '</span></button>';
+          html += '<button class="nav-item tap" data-id="' + id + '" data-name="' + esc(m.name) + ' ' + id + '"><span class="ni">' + m.icon + '</span><span class="nt">' + esc(m.name) + '</span></button>';
         });
       });
       nav.innerHTML = html;
@@ -418,6 +439,87 @@
         var b = e.target.closest('.nav-item');
         if (b) self.go(b.dataset.id);
       };
+    },
+
+    /* 侧栏模块过滤：按名称隐藏不匹配的导航项与空分组 */
+    filterNav: function (q) {
+      q = (q || '').trim().toLowerCase();
+      var nav = document.getElementById('nav');
+      if (!nav) return;
+      var items = nav.querySelectorAll('.nav-item');
+      items.forEach(function (it) {
+        var name = (it.dataset.name || '').toLowerCase();
+        it.style.display = (!q || name.indexOf(q) >= 0) ? '' : 'none';
+      });
+      nav.querySelectorAll('.nav-group').forEach(function (g) {
+        var sib = g.nextElementSibling, any = false;
+        while (sib && sib.classList.contains('nav-item')) {
+          if (sib.style.display !== 'none') { any = true; break; }
+          sib = sib.nextElementSibling;
+        }
+        g.style.display = any ? '' : 'none';
+      });
+    },
+
+    /* 全局搜索：跨模块检索内容 + 模块跳转 */
+    globalSearch: function (q) {
+      q = (q || '').trim().toLowerCase();
+      if (!q) return [];
+      var d = Store.data, self = this, out = [];
+      function add(mod, icon, title, sub) {
+        var m = self.modules[mod];
+        out.push({ mod: mod, modName: m ? m.name : '', icon: icon, title: title, sub: sub || '' });
+      }
+      self.order.forEach(function (id) {
+        var m = self.modules[id];
+        if (m && (m.name.toLowerCase().indexOf(q) >= 0 || id.indexOf(q) >= 0)) add(id, m.icon, m.name, '模块');
+      });
+      (d.tasks || []).forEach(function (t) { if (((t.title || '') + ' ' + (t.note || '') + ' ' + (t.tag || '')).toLowerCase().indexOf(q) >= 0) add('tasks', '📝', t.title || '(无标题)', (t.done ? '已完成' : '待办') + (t.tag ? ' · ' + t.tag : '')); });
+      (d.finance.flows || []).forEach(function (f) { if (((f.note || '') + ' ' + (f.cat || '') + ' ' + money(f.amount)).toLowerCase().indexOf(q) >= 0) add('finance', '💰', (f.type === 'out' ? '支出 ' : '收入 ') + money(f.amount), (f.cat || '') + (f.note ? ' · ' + f.note : '') + ' · ' + f.date); });
+      (d.media || []).forEach(function (m) { if ((m.title || '').toLowerCase().indexOf(q) >= 0) add('media', '🎬', m.title || '(未命名)', (m.type || '') + (m.status ? ' · ' + m.status : '')); });
+      if (d.diary) (d.diary.entries || []).forEach(function (e) { if ((e.text || '').toLowerCase().indexOf(q) >= 0) add('diary', '📔', (e.text || '').slice(0, 40), (e.date || '') + (e.tag ? ' · ' + e.tag : '')); });
+      (d.wish || []).forEach(function (w) { if ((w.name || '').toLowerCase().indexOf(q) >= 0) add('wish', '⭐', w.name, w.cat || ''); });
+      (d.social || []).forEach(function (s) { if (((s.name || '') + ' ' + (s.note || '')).toLowerCase().indexOf(q) >= 0) add('social', '🤝', s.name, s.cat || ''); });
+      (d.anniv || []).forEach(function (a) { if ((a.name || '').toLowerCase().indexOf(q) >= 0) add('anniv', '💞', a.name, a.type || ''); });
+      (d.items.stock || []).forEach(function (it) { if ((it.name || '').toLowerCase().indexOf(q) >= 0) add('items', '📦', it.name, '库存'); });
+      (d.items.buy || []).forEach(function (it) { if ((it.name || '').toLowerCase().indexOf(q) >= 0) add('items', '🛒', it.name, '采购'); });
+      (d.checkin.habits || []).forEach(function (h) { if ((h.name || '').toLowerCase().indexOf(q) >= 0) add('checkin', '✅', h.name, '打卡'); });
+      (d.exam.exams || []).forEach(function (x) { if ((x.name || '').toLowerCase().indexOf(q) >= 0) add('exam', '📚', x.name, '考试'); });
+      return out.slice(0, 40);
+    },
+
+    openSearch: function () {
+      var self = this;
+      var root = document.getElementById('modalRoot');
+      var el = document.createElement('div');
+      el.className = 'modal-mask';
+      el.innerHTML = '<div class="modal search-modal" role="dialog" aria-modal="true" aria-label="全局搜索">' +
+        '<div class="search-bar"><input class="search-input" type="search" placeholder="搜索模块、记账、任务、日记…" aria-label="搜索"><button class="x-btn tap" data-x aria-label="关闭">✕</button></div>' +
+        '<div class="search-results" id="searchResults"><div class="search-hint">输入关键词，跨所有模块搜索内容</div></div></div>';
+      root.appendChild(el);
+      var input = el.querySelector('.search-input');
+      var box = el.querySelector('#searchResults');
+      setTimeout(function () { try { input.focus(); } catch (e) {} }, 60);
+      function close() { el.remove(); }
+      function render(q) {
+        q = q || '';
+        if (!q.trim()) { box.innerHTML = '<div class="search-hint">输入关键词，跨所有模块搜索内容</div>'; return; }
+        var list = self.globalSearch(q);
+        if (!list.length) { box.innerHTML = '<div class="search-empty">没有找到与「' + esc(q.trim()) + '」相关的内容</div>'; return; }
+        box.innerHTML = list.map(function (r) {
+          return '<button class="search-res tap" data-mod="' + r.mod + '"><span class="sr-ico">' + r.icon + '</span>' +
+            '<span class="sr-main"><span class="sr-title">' + esc(r.title) + '</span>' +
+            (r.sub ? '<span class="sr-sub">' + esc(r.sub) + '</span>' : '') + '</span>' +
+            '<span class="sr-mod">' + esc(r.modName || '') + '</span></button>';
+        }).join('');
+      }
+      input.addEventListener('input', function () { render(input.value); });
+      el.addEventListener('click', function (e) {
+        if (e.target === el || e.target.closest('[data-x]')) return close();
+        var r = e.target.closest('.search-res');
+        if (r) { close(); self.go(r.dataset.mod); }
+      });
+      el.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
     }
   };
 
