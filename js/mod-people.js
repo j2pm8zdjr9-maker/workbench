@@ -772,6 +772,14 @@
             '</div>'
         }) +
         UI.card({
+          title: '🌗 外观主题',
+          sub: '可选择跟随系统自动切换浅色 / 深色',
+          body: '<div class="row" style="gap:8px;flex-wrap:wrap">' +
+            [['auto', '🌗 跟随系统'], ['light', '☀️ 浅色'], ['dark', '🌙 深色']].map(function (o) {
+              return '<button class="chip tap' + ((d.settings.theme || 'auto') === o[0] ? ' on' : '') + '" data-act="themeSet" data-k="' + o[0] + '">' + o[1] + '</button>';
+            }).join('') + '</div>'
+        }) +
+        UI.card({
           title: '📱 添加到手机桌面',
           body: '<div class="privacy"><ul>' +
             '<li><b>iPhone：</b>Safari 打开本页 → 底部「分享」→「添加到主屏幕」</li>' +
@@ -833,6 +841,19 @@
         Store.data.settings.fontScale = pct / 100;
         UI.applyFont(pct / 100);
         Store.save(); App.refresh();
+      },
+      themeSet: function (t) {
+        var k = t.dataset.k;
+        Store.data.settings.theme = k;
+        Store.save();
+        var de = document.documentElement;
+        if (k === 'dark') de.setAttribute('data-theme', 'dark');
+        else if (k === 'light') de.setAttribute('data-theme', 'light');
+        else de.removeAttribute('data-theme');
+        var tc = document.querySelector('meta[name="theme-color"]');
+        if (tc) tc.setAttribute('content', (k === 'light') ? '#FDFCF4' : '#16130E');
+        U.toast(k === 'dark' ? '已切换深色 🌙' : k === 'light' ? '已切换浅色 ☀️' : '已跟随系统 🌗');
+        App.refresh();
       },
       bkToggle: function () {
         var b = window.Backup.cfg();

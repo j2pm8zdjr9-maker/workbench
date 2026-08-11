@@ -23,6 +23,17 @@
   function start() {
     Store.load();
 
+    // 主题（auto=跟随系统 / light / dark）
+    (function () {
+      var th = (Store.data.settings && Store.data.settings.theme) || 'auto';
+      var de = document.documentElement;
+      if (th === 'dark') de.setAttribute('data-theme', 'dark');
+      else if (th === 'light') de.setAttribute('data-theme', 'light');
+      else de.removeAttribute('data-theme');
+      var tc = document.querySelector('meta[name="theme-color"]');
+      if (tc) tc.setAttribute('content', (th === 'light') ? '#FDFCF4' : '#16130E');
+    })();
+
     // 应用全局字体大小设置
     if (window.UI && UI.applyFont) UI.applyFont(Store.data.settings.fontScale || 1.15);
 
