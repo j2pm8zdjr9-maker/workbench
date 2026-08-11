@@ -347,6 +347,10 @@
         if (t.dataset.act === 'tfOpen' && w.TF) {
           e.preventDefault(); w.TF.open(t.dataset.tf); return;
         }
+        // 全局：图表点击放大（财务统计页的柱状图 / 折线图）
+        if (t.dataset.act === 'chartZoom' && w.FinChart && w.FinChart.zoom) {
+          e.preventDefault(); w.FinChart.zoom(w.FinChart.store[t.dataset.cid]); return;
+        }
         var fn = mod.acts && mod.acts[t.dataset.act];
         if (fn) { e.preventDefault(); fn(t, e); }
       };

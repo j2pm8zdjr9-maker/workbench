@@ -39,6 +39,7 @@
   var SIZES = [5, 10, 20, 50, 100];
   var hrKeyMap = {};   // 当前排序键（按 modId）
   var hrDirMap = {};   // 当前排序方向 'desc' | 'asc'
+  var instances = {};  // 已打开弹窗实例（modId -> {extraEl, renderExtra, redraw}）
   function getF2(m) { return fMap2[m] || ''; }
   function setF2(m, v) { fMap2[m] = v; }
   function getKey(m) { return hrKeyMap[m] || ''; }
@@ -119,6 +120,7 @@
     var extraEl2 = cfg.extraBar2 ? el.querySelector('#histExtra2-' + modId) : null;
     var sumEl = cfg.summary ? el.querySelector('#histSum-' + modId) : null;
     var pagerEl = cfg.pager ? el.querySelector('#histPager-' + modId) : null;
+    instances[modId] = { extraEl: extraEl, renderExtra: renderExtra, redraw: draw };
 
     function renderTf() { tfEl.innerHTML = TF.btn(modId); }
 
@@ -233,5 +235,13 @@
     return el;
   }
 
-  w.Hist = { open: open };
+  w.Hist = {
+    open: open,
+    getFilter: function (m) { return fMap[m] || ''; },
+    setFilter: function (m, v) {
+      setF(m, v);
+      var inst = instances[m];
+      if (inst) { if (inst.extraEl) inst.extraEl.innerHTML = inst.renderExtra(); if (inst.redraw) inst.redraw(); }
+    }
+  };
 })(window);

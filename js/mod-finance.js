@@ -60,6 +60,72 @@
       '</div>' + UI.ops(f.id, 'fedit', 'fdel') + '</div>';
   }
 
+  function finCategories() {
+    var s = {};
+    (F().catExpense || []).forEach(function (c) { s[c] = 1; });
+    (F().catIncome || []).forEach(function (c) { s[c] = 1; });
+    F().flows.forEach(function (f) { if (f.cat) s[f.cat] = 1; });
+    return Object.keys(s).sort();
+  }
+  // 'YYYY-MM' ~ 'YYYY-MM' 闭区间，逐月展开
+  function monthList(from, to) {
+    var out = [], p = from.split('-'), y = +p[0], m = +p[1];
+    var q = to.split('-'), ty = +q[0], tm = +q[1];
+    while (y < ty || (y === ty && m <= tm)) {
+      out.push(y + '-' + (m < 10 ? '0' + m : '' + m));
+      m++; if (m > 12) { m = 1; y++; }
+    }
+    return out;
+  }
+  // 分类占比行（可点击展开明细）
+  function propList(map, total, type) {
+    var rows = Object.keys(map).map(function (k) { return { t: k, v: map[k] }; }).sort(function (a, b) { return b.v - a.v; });
+    if (!rows.length) return UI.empty('暂无数据', '📊');
+    return rows.map(function (r) {
+      var p = total ? r.v / total * 100 : 0;
+      return '<div class="cat-prop-row tap" data-act="finCatDetail" data-cat="' + esc(r.t) + '" data-io="' + type + '">' +
+        '<div class="row between"><span>' + esc(r.t) + '</span>' +
+        '<span class="small muted">' + money(r.v) + ' · ' + p.toFixed(1) + '%</span></div>' +
+        UI.bar(p, true) + '</div>';
+    }).join('');
+  }
+  // 明细弹窗里的单条渲染（不带编辑/删除，避免弹窗内死按钮）
+  function renderDetailItem(f) {
+    var sign = f.type === 'in' ? '+' : f.type === 'out' ? '-' : '';
+    var color = f.type === 'in' ? '#6E8A28' : f.type === 'out' ? '#B4553F' : '#6E8A9B';
+    return '<div class="item"><div class="item-main">' +
+      '<div class="row between" style="gap:10px"><span class="item-title">' + esc(f.note || accName(f.acc) || '未分类') + '</span>' +
+      '<span style="font-weight:700;color:' + color + '">' + sign + money(f.amount) + '</span></div>' +
+      '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + '</span>' +
+      '<span class="badge grey">' + esc(accName(f.acc)) + '</span>' +
+      (f.cat ? '<span class="badge grey">' + esc(f.cat) + '</span>' : '') + '</div>' +
+      '</div></div>';
+  }
+  // 图表点击放大：把图表 html 存进 store，点击时以更大尺寸灯箱展示
+  var FIN_CHARTS = {};
+  function wrapChart(html, id) {
+    FIN_CHARTS[id] = html;
+    return '<div class="chart-zoom tap" data-act="chartZoom" data-cid="' + id + '">' + html +
+      '<span class="chart-zoom-hint">🔍 点击放大</span></div>';
+  }
+  window.FinChart = {
+    store: FIN_CHARTS,
+    wrap: wrapChart,
+    zoom: function (html) {
+      var root = document.getElementById('modalRoot');
+      var el = document.createElement('div');
+      el.className = 'modal-mask chart-lightbox';
+      el.innerHTML = '<div class="chart-lightbox-inner">' +
+        '<button class="di-lightbox-x tap" data-cx>✕</button>' +
+        '<div class="chart-lightbox-scroll">' + html + '</div></div>';
+      root.appendChild(el);
+      UI.lock();
+      el.addEventListener('click', function (e) {
+        if (e.target === el || e.target.closest('[data-cx]')) { el.remove(); UI.unlock(); }
+      });
+    }
+  };
+
   var finance = {
     id: 'finance', icon: '💰', name: '财务记账',
 
@@ -163,15 +229,19 @@
     /* ---------- 统计 ---------- */
     stat: function () {
       var flows = F().flows;
-      var y = App.tab('finance', 'sy', U.yr());
-      var years = {}; flows.forEach(function (f) { years[U.yr(f.date)] = 1; }); years[U.yr()] = 1;
-      var yl = Object.keys(years).sort().reverse();
+      var now = new Date();
 
-      // 近 6 个月
-      var months = [], d = new Date();
-      for (var i = 5; i >= 0; i--) {
-        var dd = new Date(d.getFullYear(), d.getMonth() - i, 1);
-        months.push(dd.getFullYear() + '-' + U.pad(dd.getMonth() + 1));
+      // 柱状图：可选月份时间段（近3/6/12月、本年）
+      var barMon = App.tab('finance', 'barmon', '6');
+      var months = [];
+      if (barMon === 'year') {
+        for (var mm = 1; mm <= now.getMonth() + 1; mm++) months.push(now.getFullYear() + '-' + U.pad(mm));
+      } else {
+        var n = +barMon || 6;
+        for (var i = n - 1; i >= 0; i--) {
+          var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          months.push(d.getFullYear() + '-' + U.pad(d.getMonth() + 1));
+        }
       }
       var barRows = months.map(function (m) {
         var mf = flows.filter(function (f) { return U.ym(f.date) === m; });
@@ -182,55 +252,53 @@
         };
       });
 
-      // 年度分类占比
-      var yf = flows.filter(function (f) { return U.yr(f.date) === y; });
+      // 分类占比：按 finance_stat 时间段筛选
+      var statFlows = flows.filter(function (f) { return TF.inRange('finance_stat', f.date); });
       var expMap = {}, incMap = {};
-      yf.forEach(function (f) {
+      statFlows.forEach(function (f) {
         if (f.type === 'out') expMap[f.cat || '未分类'] = (expMap[f.cat || '未分类'] || 0) + num(f.amount);
         if (f.type === 'in') incMap[f.cat || '未分类'] = (incMap[f.cat || '未分类'] || 0) + num(f.amount);
       });
-      var toRows = function (m) {
-        return Object.keys(m).map(function (k) { return { t: k, v: m[k] }; }).sort(function (a, b) { return b.v - a.v; });
-      };
-      var yInc = sumBy(yf.filter(function (f) { return f.type === 'in'; }), 'amount');
-      var yExp = sumBy(yf.filter(function (f) { return f.type === 'out'; }), 'amount');
+      var yInc = sumBy(statFlows.filter(function (f) { return f.type === 'in'; }), 'amount');
+      var yExp = sumBy(statFlows.filter(function (f) { return f.type === 'out'; }), 'amount');
 
-      // 资产净值趋势（近 12 个月末）
-      var netPts = [], init = F().accounts.reduce(function (s, a) { return s + num(a.init); }, 0);
-      var d2 = new Date();
-      for (var j = 11; j >= 0; j--) {
-        var end = new Date(d2.getFullYear(), d2.getMonth() - j + 1, 0);
-        var key = end.getFullYear() + '-' + U.pad(end.getMonth() + 1) + '-' + U.pad(end.getDate());
-        var v = init;
-        flows.forEach(function (f) {
-          if (String(f.date) > key) return;
-          if (f.type === 'in') v += num(f.amount);
-          if (f.type === 'out') v -= num(f.amount);
-        });
-        netPts.push({ t: key.slice(0, 7), v: Math.round(v) });
-      }
+      // 资产净值：按 finance_net 时间段逐月末计算
+      var netR = TF.get('finance_net');
+      var fromM = netR.from ? netR.from.slice(0, 7) : (flows.length ? flows.map(function (f) { return f.date.slice(0, 7); }).sort()[0] : U.ym());
+      var toM = netR.to ? netR.to.slice(0, 7) : U.ym();
+      var netMonths = monthList(fromM, toM);
+      var netInit = F().accounts.reduce(function (s, a) { return s + num(a.init); }, 0);
+      var netPts = netMonths.map(function (m) {
+        var y = +m.slice(0, 4), mo = +m.slice(5, 7);
+        var end = m + '-' + U.pad(new Date(y, mo, 0).getDate());
+        var v = netInit;
+        flows.forEach(function (f) { if (String(f.date) > end) return; if (f.type === 'in') v += num(f.amount); if (f.type === 'out') v -= num(f.amount); });
+        return { t: m, v: Math.round(v) };
+      });
 
-      return UI.card({ title: '📊 近 6 个月收支', body: UI.bars2(barRows) }) +
+      return UI.card({
+        title: '📊 收支柱状图',
+        right: UI.pills([{ k: '3', t: '近3月' }, { k: '6', t: '近6月' }, { k: '12', t: '近12月' }, { k: 'year', t: '本年' }], barMon, 'barmon'),
+        body: wrapChart(UI.bars2(barRows), 'finBar')
+      }) +
         UI.card({
-          title: '🥧 ' + y + ' 年分类占比',
-          right: yl.length > 1 ? UI.pills(yl.map(function (x) { return { k: x, t: x + '年' }; }), y, 'sy') : '',
-          body: '<div class="row between" style="margin-bottom:6px"><strong class="small">支出 ' + money(yExp) + '</strong></div>' +
-            UI.hbars(toRows(expMap), yExp, money) +
+          title: '🥧 分类占比',
+          right: TF.btn('finance_stat', { sm: true }),
+          body: '<div class="row between" style="margin-bottom:6px"><strong class="small">支出 ' + money(yExp) + '</strong><span class="small muted">点击分类看明细</span></div>' +
+            propList(expMap, yExp, 'out') +
             '<div class="hr" style="margin:18px 0"></div>' +
             '<div class="row between" style="margin-bottom:6px"><strong class="small">收入 ' + money(yInc) + '</strong></div>' +
-            UI.hbars(toRows(incMap), yInc, money)
+            propList(incMap, yInc, 'in')
         }) +
-        UI.card({ title: '📈 资产净值变化', sub: '近 12 个月', body: UI.line(netPts, { dec: 0 }) }) +
+        UI.card({
+          title: '📈 资产净值变化',
+          right: TF.btn('finance_net', { sm: true }),
+          body: wrapChart(UI.line(netPts, { dec: 0 }), 'finNet')
+        }) +
         UI.card({
           title: '⚙️ 收支分类管理',
-          body: '<div class="small muted" style="margin-bottom:10px">支出分类</div>' +
-            '<div class="pills">' + F().catExpense.map(function (c) {
-              return '<span class="pill">' + esc(c) + '<button class="link-btn del tap" data-act="catdel" data-t="out" data-c="' + esc(c) + '">×</button></span>';
-            }).join('') + '<button class="pill tap" data-act="catadd" data-t="out">+ 新增</button></div>' +
-            '<div class="small muted" style="margin:16px 0 10px">收入分类</div>' +
-            '<div class="pills">' + F().catIncome.map(function (c) {
-              return '<span class="pill">' + esc(c) + '<button class="link-btn del tap" data-act="catdel" data-t="in" data-c="' + esc(c) + '">×</button></span>';
-            }).join('') + '<button class="pill tap" data-act="catadd" data-t="in">+ 新增</button></div>'
+          right: '<button class="btn ghost sm tap" data-act="finCatManage">🗂 分类管理</button>',
+          body: '<div class="small muted">支出 / 收入分类可在「分类管理」里新增或删减，记账时选择使用。</div>'
         });
     },
 
@@ -238,7 +306,7 @@
       tab: function (t) { App.setTab('finance', 'main', t.dataset.k); ListPager.resetPg('finance:flow'); App.refresh(); },
       ftype: function (t) { App.setTab('finance', 'ftype', t.dataset.k); ListPager.resetPg('finance:flow'); App.refresh(); },
       facc: function (t) { App.setTab('finance', 'facc', t.dataset.k); ListPager.resetPg('finance:flow'); App.refresh(); },
-      sy: function (t) { App.setTab('finance', 'sy', t.dataset.k); App.refresh(); },
+      barmon: function (t) { App.setTab('finance', 'barmon', t.dataset.k); App.refresh(); },
 
       anew: function () {
         UI.form({
@@ -384,16 +452,58 @@
         Store.save(); App.refresh();
       },
 
-      catadd: function (t) {
-        var type = t.dataset.t;
-        UI.form({ title: '新增' + (type === 'out' ? '支出' : '收入') + '分类', fields: [{ k: 'c', label: '分类名称', req: true, full: true }] })
-          .then(function (v) { if (!v) return; addCat(type, v.c); Store.save(); App.refresh(); });
+      finCatDetail: function (t) {
+        var cat = t.dataset.cat, io = t.dataset.io;
+        var arr = F().flows.filter(function (f) {
+          if (f.type !== io) return false;
+          if ((f.cat || '') !== cat) return false;
+          if (!TF.inRange('finance_stat', f.date)) return false;
+          return true;
+        }).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id)); });
+        var el = UI.sheet('「' + cat + '」' + (io === 'out' ? '支出' : '收入') + '明细 · ' + arr.length + ' 笔',
+          '<div id="finCatDetailList"></div>', '<button class="btn ghost tap" data-x>关闭</button>');
+        var listEl = el.querySelector('#finCatDetailList');
+        function draw() {
+          listEl.innerHTML = ListPager.out({ ns: 'finance:catdetail', items: arr, defSize: 10, empty: '该时间段内没有「' + cat + '」记录', render: renderDetailItem });
+        }
+        draw();
+        el.addEventListener('click', function (e) {
+          var b = e.target.closest('[data-act]'); if (!b) return;
+          if (b.dataset.act === 'listPg') { e.preventDefault(); ListPager.handle('listPg', b); }
+        });
+        el.addEventListener('change', function (e) {
+          if (e.target.matches('[data-chg="listSize"]')) ListPager.handleSize(e.target);
+        });
       },
-      catdel: function (t) {
-        var type = t.dataset.t, c = t.dataset.c;
-        var k = type === 'out' ? 'catExpense' : 'catIncome';
-        F()[k] = F()[k].filter(function (x) { return x !== c; });
-        Store.save(); App.refresh();
+      finCatManage: function () {
+        function section(key, title) {
+          var arr = F()[key];
+          var pills = arr.length ? arr.map(function (c) {
+            return '<span class="pill" style="display:inline-flex;align-items:center;gap:6px">' + esc(c) +
+              '<button class="link-btn del tap" data-act="finCatDel" data-k="' + key + '" data-c="' + esc(c) + '">×</button></span>';
+          }).join('') : UI.empty('还没有分类');
+          return '<div class="small muted" style="margin:0 0 8px">' + title + '</div>' +
+            '<div class="pills" style="margin-bottom:10px">' + pills + '</div>' +
+            '<div class="field full"><input class="input" id="newcat-' + key + '" placeholder="新增' + title + '"></div>' +
+            '<button class="btn primary sm tap" data-act="finCatAdd" data-k="' + key + '" style="margin-bottom:14px">+ 添加' + title + '</button>';
+        }
+        function renderAll() { return section('catExpense', '支出分类') + '<div style="height:6px"></div>' + section('catIncome', '收入分类'); }
+        var el = UI.sheet('🗂 收支分类管理', renderAll(), '<button class="btn ghost tap" data-x>关闭</button>');
+        var body = el.querySelector('.modal-body');
+        el.addEventListener('click', function (e) {
+          var b = e.target.closest('[data-act]'); if (!b) return;
+          var a = b.dataset.act;
+          if (a === 'finCatAdd') {
+            var key = b.dataset.k, inp = el.querySelector('#newcat-' + key), v = (inp.value || '').trim();
+            if (!v) return;
+            if (F()[key].indexOf(v) < 0) { F()[key].push(v); Store.save(); }
+            inp.value = ''; body.innerHTML = renderAll(); App.refresh();
+          } else if (a === 'finCatDel') {
+            var key2 = b.dataset.k;
+            F()[key2] = F()[key2].filter(function (x) { return x !== b.dataset.c; });
+            Store.save(); body.innerHTML = renderAll(); App.refresh();
+          }
+        });
       },
       hist: function () {
         Hist.open({
@@ -414,15 +524,16 @@
               '<button class="btn sm ghost tap" data-act="finExport">📤 导出 xlsx</button>' +
               '<input type="file" id="finXlsx" accept=".xlsx,.xls" style="display:none">' +
               '</div>';
-            var cats = {};
-            F().flows.forEach(function (f) { if (f.cat) cats[f.cat] = 1; });
-            var ps = [{ k: '', t: '全部分类' }].concat(Object.keys(cats).sort().map(function (c) { return { k: c, t: c }; }));
-            return io + UI.pills(ps, cur, 'histFilter');
+            var sel = (cur || '').split(',').filter(Boolean);
+            var label = sel.length ? ('🏷 已选 ' + sel.length + ' 项 ▾') : '🏷 全部分类 ▾';
+            var pill = '<button class="btn sm ghost tap" data-act="finCatOpen">' + U.esc(label) + '</button>';
+            return io + '<div class="row" style="margin-bottom:6px">' + pill + '</div>';
           },
           extraMatch: function (f, val) {
             if (!val) return true;
             if (f.type === 'transfer') return false;
-            return f.cat === val;
+            var set = val.split(',');
+            return set.indexOf(f.cat) >= 0;
           },
           summary: function (arr) {
             var inc = arr.filter(function (f) { return f.type === 'in'; }).reduce(function (s, f) { return s + num(f.amount); }, 0);
@@ -487,6 +598,33 @@
               } catch (err) {
                 U.toast('导出失败：' + (err && err.message ? err.message : err));
               }
+            },
+            finCatOpen: function () {
+              var modId = 'finance';
+              var cats = finCategories();
+              var sel = (window.Hist.getFilter(modId) || '').split(',').filter(Boolean);
+              var render = function () {
+                return '<div class="small muted" style="margin-bottom:10px">点击可多选分类，查看所选分类的收支</div>' +
+                  '<div class="pills">' + cats.map(function (c) {
+                    var on = sel.indexOf(c) >= 0;
+                    return '<button class="pill tap' + (on ? ' on' : '') + '" data-cat="' + U.esc(c) + '">' + (on ? '✓ ' : '') + U.esc(c) + '</button>';
+                  }).join('') + '</div>' +
+                  '<div class="row" style="gap:8px;margin-top:12px"><button class="btn ghost sm tap" data-cat-act="finCatAll">全选</button><button class="btn ghost sm tap" data-cat-act="finCatNone">清空</button></div>';
+              };
+              var el = UI.sheet('选择分类（可多选）', '<div id="finCatPickBody">' + render() + '</div>', '<button class="btn primary tap" data-ok style="width:100%">确定</button>');
+              var body = el.querySelector('#finCatPickBody');
+              body.addEventListener('click', function (ev) {
+                var b = ev.target.closest('[data-cat]'); if (!b) return;
+                var c = b.dataset.cat, i = sel.indexOf(c);
+                if (i >= 0) sel.splice(i, 1); else sel.push(c);
+                body.innerHTML = render();
+              });
+              el.querySelector('[data-cat-act="finCatAll"]').addEventListener('click', function () { sel = cats.slice(); body.innerHTML = render(); });
+              el.querySelector('[data-cat-act="finCatNone"]').addEventListener('click', function () { sel = []; body.innerHTML = render(); });
+              el.querySelector('[data-ok]').addEventListener('click', function () {
+                window.Hist.setFilter(modId, sel.join(','));
+                el.remove(); UI.unlock();
+              });
             }
           }
         });
@@ -635,6 +773,12 @@
 
   TF.def('finance_flow', 'month');
   TF.hook('finance_flow', function () { ListPager.resetPg('finance:flow'); App.refresh(); });
+
+  // 统计分析：分类占比时间段、资产净值时间段
+  TF.def('finance_stat', 'year');
+  TF.hook('finance_stat', function () { App.refresh(); });
+  TF.def('finance_net', 'year');
+  TF.hook('finance_net', function () { App.refresh(); });
 
   App.register(finance);
 })();
