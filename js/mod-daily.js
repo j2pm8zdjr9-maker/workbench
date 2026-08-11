@@ -331,7 +331,6 @@
       return UI.head('✅ 打卡', '坚持每天的小习惯，积少成多') +
         UI.stats([
           ['打卡任务', total],
-          ['今日完成', tDone + '/' + total, total > 0 && tDone === total],
           ['连续打卡', streakDays() + ' 天'],
           ['累计打卡', totalChecks()]
         ]) + this.daily();
@@ -395,18 +394,17 @@
       }
 
       var body =
-        '<div class="row between" style="margin-bottom:14px">' +
+        '<div class="row between" style="margin-bottom:4px">' +
         '<button class="btn sm ghost tap" data-act="prev">‹ 前一天</button>' +
         '<div style="text-align:center"><div style="font-weight:650">' + U.fmtDate(cur.day, true) + '</div>' +
         '<div class="small muted">' + (isToday ? '今天' : U.relDay(cur.day)) + '</div></div>' +
         '<button class="btn sm ghost tap" data-act="next"' + (isToday ? ' disabled' : '') + '>后一天 ›</button></div>' +
-        (isToday ? '' : '<div class="row" style="margin-bottom:12px"><button class="link-btn tap" data-act="today">↩ 回到今天</button></div>') +
-        (total ? '<div class="row between small muted" style="margin-bottom:8px"><span>今日完成 ' + done + '/' + total + '</span></div>' : '') +
+        (isToday ? '' : '<div class="row" style="margin-bottom:8px"><button class="link-btn tap" data-act="today">↩ 回到今天</button></div>') +
         (habits.length ?
-          '<div class="list" style="margin-top:14px">' + ListPager.slice('checkin:list', habits).map(renderHabit).join('') + '</div>' + ListPager.pager('checkin:list', habits.length) :
+          '<div class="list" style="margin-top:4px">' + ListPager.slice('checkin:list', habits).map(renderHabit).join('') + '</div>' + ListPager.pager('checkin:list', habits.length) :
           (all.length ? UI.empty('「' + U.fmtDate(cur.day, true) + '」没有进行中的打卡任务', '🌿')
                       : UI.empty('还没有打卡任务，点右上角「+ 新增打卡」开始', '🌿'))) +
-        (total && isToday && done === total ? '<div class="accent-note" style="margin-top:14px">🎉 今日全部打卡完成，继续保持！</div>' : '');
+        (total && isToday && done === total ? '<div class="accent-note" style="margin-top:8px">🎉 今日全部打卡完成，继续保持！</div>' : '');
 
       return UI.card({
         title: '我的打卡任务', sub: isToday ? '点击左侧圆圈完成今日打卡' : '历史记录（只读）',
