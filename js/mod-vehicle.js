@@ -238,9 +238,9 @@
         right: TF.btn('vehicle_ev_list'),
         body: UI.stats([
           ['总里程', s.km > 0 ? s.km + ' km' : '—'],
-          ['电费合计', U.money(s.fee), true],
-          ['实付每公里', s.km > 0 ? U.money(perKm) : '—', true],
-          ['等效每公里', s.km > 0 ? U.money(eqPerKm) : '—'],
+          ['电费合计', U.money(s.fee), true, U.moneyFull(s.fee)],
+          ['实付每公里', s.km > 0 ? U.money(perKm) : '—', true, s.km > 0 ? U.moneyFull(perKm) : ''],
+          ['等效每公里', s.km > 0 ? U.money(eqPerKm) : '—', false, s.km > 0 ? U.moneyFull(eqPerKm) : ''],
           ['免费充电占比', freePct.toFixed(0) + '%'],
           ['已抄表电量', s.meter.toFixed(2) + ' 度'],
           ['充入电量', s.charged.toFixed(2) + ' 度（含免费）'],
@@ -280,9 +280,9 @@
         title: '📊 加油统计',
         right: TF.btn('vehicle_fuel_list'),
         body: UI.stats([
-          ['累计花费', U.money(s.cost)],
+          ['累计花费', U.money(s.cost), false, U.moneyFull(s.cost)],
           ['累计加油', s.liters.toFixed(2) + ' 升'],
-          ['平均', s.perKm > 0 ? U.money(s.perKm) + ' /km' : '—']
+          ['平均', s.perKm > 0 ? U.money(s.perKm) + ' /km' : '—', false, s.perKm > 0 ? U.moneyFull(s.perKm) : '']
         ]) + (s.km > 0 ? '<div class="small muted" style="margin-top:8px">统计区间内共行驶 ' + s.km + ' km</div>' : '')
       });
       var srt = sortedRefuels();
@@ -512,9 +512,9 @@
             var freePct = charged > 0 ? freeCharged / charged * 100 : 0;
             return UI.stats([
               ['总里程', km > 0 ? km + ' km' : '—'],
-              ['电费合计', U.money(fee), true],
-              ['实付每公里', km > 0 ? U.money(perKm) : '—', true],
-              ['等效每公里', km > 0 ? U.money(eqPerKm) : '—'],
+              ['电费合计', U.money(fee), true, U.moneyFull(fee)],
+              ['实付每公里', km > 0 ? U.money(perKm) : '—', true, km > 0 ? U.moneyFull(perKm) : ''],
+              ['等效每公里', km > 0 ? U.money(eqPerKm) : '—', false, km > 0 ? U.moneyFull(eqPerKm) : ''],
               ['免费充电占比', freePct.toFixed(0) + '%'],
               ['已抄表电量', meter.toFixed(2) + ' 度', true],
               ['充入电量', charged.toFixed(2) + ' 度（含免费）'],
@@ -569,9 +569,9 @@
             });
             var perKm = km > 0 ? cost / km : 0;
             return UI.stats([
-              ['累计花费', U.money(cost), true],
+              ['累计花费', U.money(cost), true, U.moneyFull(cost)],
               ['累计加油', liters.toFixed(2) + ' 升'],
-              ['平均', perKm > 0 ? U.money(perKm) + ' /km' : '—'],
+              ['平均', perKm > 0 ? U.money(perKm) + ' /km' : '—', false, perKm > 0 ? U.moneyFull(perKm) : ''],
               ['里程', km > 0 ? km + ' km' : '—']
             ]);
           },

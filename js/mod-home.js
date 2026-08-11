@@ -125,8 +125,8 @@
         { v: water + 'ml', k: '今日饮水', go: 'body', tk: 'main', tv: 'water', ok: wGoal && water >= wGoal },
         { v: buy, k: '待购清单', go: 'items', tk: 'main', tv: 'buy' },
         { v: stockLow, k: '库存预警', go: 'items', tk: 'main', tv: 'stock', warn: stockLow > 0 },
-        { v: U.money(exp), k: '本月支出', go: 'finance' },
-        { v: U.money(balance), k: '本月结余', go: 'finance', neg: balance < 0 },
+        { v: U.money(exp), k: '本月支出', go: 'finance', full: U.moneyFull(exp) },
+        { v: U.money(balance), k: '本月结余', go: 'finance', neg: balance < 0, full: U.moneyFull(balance) },
         { v: examUp, k: '备考进行', go: 'exam' },
         { v: fmtDur(readMins), k: '今天看书时长', go: 'media', tk: 'type', tv: 'book' },
         { v: diaryM, k: '本月日记', go: 'diary' }
@@ -134,7 +134,7 @@
       return '<div class="ov-grid">' + items.map(function (o) {
         return '<button class="ov tap' + (o.warn ? ' warn' : '') + (o.ok ? ' ok' : '') + (o.neg ? ' neg' : '') + '" data-act="goStat" data-go="' + o.go + '"' +
           (o.tk ? ' data-tk="' + o.tk + '" data-tv="' + o.tv + '"' : '') + '>' +
-          '<span class="ov-v">' + esc('' + o.v) + '</span><span class="ov-k">' + o.k + '</span></button>';
+          '<span class="ov-v"' + (o.full ? ' title="' + esc(o.full) + '"' : '') + '>' + esc('' + o.v) + '</span><span class="ov-k">' + o.k + '</span></button>';
       }).join('') + '</div>';
     },
 

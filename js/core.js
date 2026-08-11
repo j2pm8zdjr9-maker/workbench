@@ -224,6 +224,14 @@
 
   function money(v) {
     var n = num(v);
+    var sign = n < 0 ? '-' : '';
+    var abs = Math.abs(n);
+    if (abs >= 1e8) return sign + '¥' + (abs / 1e8).toFixed(2) + '亿';
+    if (abs >= 1e4) return sign + '¥' + (abs / 1e4).toFixed(2) + '万';
+    return sign + '¥' + abs.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function moneyFull(v) {
+    var n = num(v);
     return (n < 0 ? '-' : '') + '¥' + Math.abs(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
@@ -488,7 +496,7 @@
   w.Water = Water;
   w.U = {
     uid: uid, today: today, nowTime: nowTime, pad: pad, shiftDay: shiftDay, parseDate: parseDate,
-    fmtDate: fmtDate, dayDiff: dayDiff, relDay: relDay, esc: esc, num: num, money: money,
+    fmtDate: fmtDate, dayDiff: dayDiff, relDay: relDay, esc: esc, num: num, money: money, moneyFull: moneyFull,
     ym: ym, yr: yr, sortBy: sortBy, toast: toast
   };
 

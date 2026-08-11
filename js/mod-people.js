@@ -170,8 +170,8 @@
       var out = arr.reduce(function (s, x) { return s + num(x.outAmt); }, 0);
       var back = arr.reduce(function (s, x) { return s + num(x.inAmt); }, 0);
       return UI.head('🤝 人情台账', '来往清清楚楚，随礼有据可依') +
-        UI.stats([['记录条数', arr.length], ['送出合计', money(out)], ['收到合计', money(back)],
-        ['净往来', money(back - out), true]]) +
+        UI.stats([['记录条数', arr.length], ['送出合计', money(out), false, U.moneyFull(out)], ['收到合计', money(back), false, U.moneyFull(back)],
+        ['净往来', money(back - out), true, U.moneyFull(back - out)]]) +
         UI.card({
           title: '往来明细',
           right: Cats.btn('socialCats', '分类管理', '🗂 分类管理') + '<button class="btn primary sm tap" data-act="new">+ 添加记录</button>',
@@ -223,7 +223,7 @@
     var open = socialExpanded === x.id;
     var out = num(x.outAmt), back = num(x.inAmt), net = back - out;
     var netHtml = (out || back)
-      ? '<span class="badge grey">净 ' + (net > 0 ? '+' : '') + money(net) + '</span>' : '';
+      ? '<span class="badge grey" title="净 ' + U.moneyFull(net) + '">净 ' + (net > 0 ? '+' : '') + money(net) + '</span>' : '';
     var head = '<div class="row between"><span class="item-title">' + esc(x.name) +
       (x.rel ? ' <span class="badge grey">' + esc(x.rel) + '</span>' : '') + '</span>' +
       '<span class="row" style="gap:6px;align-items:center;flex-shrink:0">' + netHtml +
@@ -233,15 +233,15 @@
         '<div class="item-meta"><span>' + U.fmtDate(x.date) + '</span>' +
         (x.cat ? '<span class="badge">' + esc(x.cat) + '</span>' : '') +
         (x.reason ? '<span class="badge grey">' + esc(x.reason) + '</span>' : '') +
-        (out ? '<span>送出 ' + money(out) + '</span>' : '') +
-        (back ? '<span>回赠 ' + money(back) + '</span>' : '') + '</div></div></div>';
+        (out ? '<span title="送出 ' + U.moneyFull(out) + '">送出 ' + money(out) + '</span>' : '') +
+        (back ? '<span title="回赠 ' + U.moneyFull(back) + '">回赠 ' + money(back) + '</span>' : '') + '</div></div></div>';
     }
     return '<div class="item open" data-act="soexp" data-id="' + x.id + '"><div class="item-main">' + head +
       '<div class="item-meta"><span>' + U.fmtDate(x.date, true) + '</span>' +
       (x.cat ? '<span class="badge">' + esc(x.cat) + '</span>' : '') +
       (x.reason ? '<span class="badge grey">' + esc(x.reason) + '</span>' : '') + '</div>' +
-      '<div class="item-note">📤 我方送出：' + (x.outGift ? esc(x.outGift) : '—') + (out ? ' · ' + money(out) : '') + '</div>' +
-      '<div class="item-note">📥 对方回赠：' + (x.inGift ? esc(x.inGift) : '—') + (back ? ' · ' + money(back) : '') + '</div>' +
+      '<div class="item-note">📤 我方送出：' + (x.outGift ? esc(x.outGift) : '—') + (out ? ' · <span title="' + U.moneyFull(out) + '">' + money(out) + '</span>' : '') + '</div>' +
+      '<div class="item-note">📥 对方回赠：' + (x.inGift ? esc(x.inGift) : '—') + (back ? ' · <span title="' + U.moneyFull(back) + '">' + money(back) + '</span>' : '') + '</div>' +
       (x.note ? '<div class="item-note">📝 ' + esc(x.note) + '</div>' : '') +
       '</div>' + UI.ops(x.id, 'edit', 'del') + '</div>';
   }

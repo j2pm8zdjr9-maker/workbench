@@ -88,12 +88,12 @@
       return '<div class="bar' + (thin ? ' thin' : '') + '"><i class="' + (pct >= 100 ? 'full' : '') + '" style="width:' + pct + '%"></i></div>';
     },
 
-    stat: function (k, v, accent) {
-      return '<div class="stat' + (accent ? ' accent' : '') + '"><span class="k">' + esc(k) + '</span><span class="v">' + v + '</span></div>';
+    stat: function (k, v, accent, title) {
+      return '<div class="stat' + (accent ? ' accent' : '') + '"' + (title ? ' title="' + esc(title) + '"' : '') + '><span class="k">' + esc(k) + '</span><span class="v">' + v + '</span></div>';
     },
 
     stats: function (arr) {
-      return '<div class="stat-grid">' + arr.map(function (s) { return UI.stat(s[0], s[1], s[2]); }).join('') + '</div>';
+      return '<div class="stat-grid">' + arr.map(function (s) { return UI.stat(s[0], s[1], s[2], s[3]); }).join('') + '</div>';
     },
 
     badge: function (t, cls) { return '<span class="badge' + (cls ? ' ' + cls : '') + '">' + esc(t) + '</span>'; },

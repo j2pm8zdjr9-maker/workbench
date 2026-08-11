@@ -679,7 +679,7 @@
       var undone = arr.filter(function (x) { return !x.done; }), done = arr.filter(function (x) { return x.done; });
       var cost = undone.reduce(function (s, x) { return s + num(x.price) * (num(x.qty) || 1); }, 0);
       return UI.card({
-        title: '🛒 采购清单', sub: '待购 ' + undone.length + ' 件 · 预计 ' + U.money(cost),
+        title: '🛒 采购清单', sub: '待购 ' + undone.length + ' 件 · 预计 ' + U.money(cost) + (Math.abs(cost) >= 1e4 ? '（' + U.moneyFull(cost) + '）' : ''),
         right: (done.length ? '<button class="link-btn tap" data-act="bclear">清除已购 (' + done.length + ')</button>' : '') +
           '<button class="btn primary sm tap" data-act="bnew">+ 添加</button>',
         body:           '<div class="quick-add" style="margin-bottom:16px">' +

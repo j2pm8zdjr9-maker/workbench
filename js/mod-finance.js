@@ -53,7 +53,7 @@
     return '<div class="item"><div class="item-main">' +
       '<div class="row between" style="gap:10px">' +
       '<span class="item-title">' + esc(f.type === 'transfer' ? accName(f.acc) + ' → ' + accName(f.acc2) : (f.cat || '未分类')) + '</span>' +
-      '<span style="font-weight:700;color:' + color + '">' + sign + money(f.amount).replace('¥', '¥') + '</span></div>' +
+      '<span style="font-weight:700;color:' + color + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;margin-left:8px;" title="' + U.moneyFull(f.amount) + '">' + sign + money(f.amount).replace('¥', '¥') + '</span></div>' +
       '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + '</span>' +
       (f.type !== 'transfer' ? '<span class="badge grey">' + esc(accName(f.acc)) + '</span>' : '<span class="badge info">转账</span>') +
       (f.note ? '<span>' + esc(f.note) + '</span>' : '') + '</div>' +
@@ -85,7 +85,7 @@
       var p = total ? r.v / total * 100 : 0;
       return '<div class="cat-prop-row tap" data-act="finCatDetail" data-cat="' + esc(r.t) + '" data-io="' + type + '">' +
         '<div class="row between"><span>' + esc(r.t) + '</span>' +
-        '<span class="small muted">' + money(r.v) + ' · ' + p.toFixed(1) + '%</span></div>' +
+        '<span class="small muted" title="' + U.moneyFull(r.v) + '">' + money(r.v) + ' · ' + p.toFixed(1) + '%</span></div>' +
         UI.bar(p, true) + '</div>';
     }).join('');
   }
@@ -95,7 +95,7 @@
     var color = f.type === 'in' ? '#6E8A28' : f.type === 'out' ? '#B4553F' : '#6E8A9B';
     return '<div class="item"><div class="item-main">' +
       '<div class="row between" style="gap:10px"><span class="item-title">' + esc(f.note || accName(f.acc) || '未分类') + '</span>' +
-      '<span style="font-weight:700;color:' + color + '">' + sign + money(f.amount) + '</span></div>' +
+      '<span style="font-weight:700;color:' + color + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;margin-left:8px;" title="' + U.moneyFull(f.amount) + '">' + sign + money(f.amount) + '</span></div>' +
       '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + '</span>' +
       '<span class="badge grey">' + esc(accName(f.acc)) + '</span>' +
       (f.cat ? '<span class="badge grey">' + esc(f.cat) + '</span>' : '') + '</div>' +
@@ -139,10 +139,10 @@
 
       return UI.head('💰 财务记账', '账户 · 收支 · 存钱目标 · 统计分析') +
         UI.stats([
-          ['总资产', money(asset), true],
-          ['本月收入', money(inc)],
-          ['本月支出', money(exp)],
-          ['本月结余', money(inc - exp)]
+          ['总资产', money(asset), true, U.moneyFull(asset)],
+          ['本月收入', money(inc), false, U.moneyFull(inc)],
+          ['本月支出', money(exp), false, U.moneyFull(exp)],
+          ['本月结余', money(inc - exp), false, U.moneyFull(inc - exp)]
         ]) +
         UI.tabs([
           { k: 'flow', t: '收支记账', i: '🧾' }, { k: 'acc', t: '账户管理', i: '🏦' },
@@ -155,14 +155,14 @@
     accounts: function () {
       var arr = F().accounts;
       return UI.card({
-        title: '🏦 我的账户', sub: '总资产 ' + money(totalAsset()),
+        title: '🏦 我的账户', sub: '总资产 ' + money(totalAsset()) + (Math.abs(totalAsset()) >= 1e4 ? '（' + U.moneyFull(totalAsset()) + '）' : ''),
         right: '<button class="btn sm ghost tap" data-act="tnew">↔ 转账</button><button class="btn primary sm tap" data-act="anew">+ 新建账户</button>',
         body: '<div class="list">' + (arr.length ? arr.map(function (a) {
           var b = balance(a.id);
           var isDebt = a.type === '信用卡' && b < 0;
           return '<div class="item"><div class="item-main">' +
             '<div class="row between"><span class="item-title">' + esc(a.name) + '</span>' +
-            '<span class="big-num" style="font-size:19px;color:' + (b < 0 ? '#B4553F' : '#331915') + '">' + money(b) + '</span></div>' +
+            '<span class="big-num" style="font-size:19px;color:' + (b < 0 ? '#B4553F' : '#331915') + '" title="' + U.moneyFull(b) + '">' + money(b) + '</span></div>' +
             '<div class="item-meta"><span class="badge grey">' + esc(a.type || '其他') + '</span>' +
             (isDebt ? '<span class="badge danger">欠 ' + money(-b) + '</span>' : '') +
             (a.note ? '<span>' + esc(a.note) + '</span>' : '') + '</div>' +
@@ -211,8 +211,8 @@
             '<span class="badge' + (pct >= 100 ? '' : ' grey') + '">' + pct.toFixed(1) + '%</span></div>' +
             '<div style="margin:8px 0">' + UI.bar(pct) + '</div>' +
             '<div class="item-meta">' +
-            '<span>已存 <b>' + money(saved) + '</b> / ' + money(g.target) + '</span>' +
-            (left > 0 ? '<span class="badge grey">还差 ' + money(left) + '</span>' : '<span class="badge">已达成</span>') +
+            '<span title="已存 ' + U.moneyFull(saved) + ' / 目标 ' + U.moneyFull(g.target) + '">已存 <b>' + money(saved) + '</b> / ' + money(g.target) + '</span>' +
+            (left > 0 ? '<span class="badge grey" title="还差 ' + U.moneyFull(left) + '">还差 ' + money(left) + '</span>' : '<span class="badge">已达成</span>') +
             (days !== null ? '<span class="badge ' + (days < 0 ? 'danger' : days < 30 ? 'warn' : 'grey') + '">' + (days < 0 ? '已过期限' : '剩 ' + days + ' 天') + '</span>' : '') +
             ((g.logs || []).length ? '<span class="badge grey">' + g.logs.length + ' 次存入</span>' : '') +
             '</div>' +
@@ -284,10 +284,10 @@
         UI.card({
           title: '🥧 分类占比',
           right: TF.btn('finance_stat', { sm: true }),
-          body: '<div class="row between" style="margin-bottom:6px"><strong class="small">支出 ' + money(yExp) + '</strong><span class="small muted">点击分类看明细</span></div>' +
+          body: '<div class="row between" style="margin-bottom:6px"><strong class="small" title="支出 ' + U.moneyFull(yExp) + '">支出 ' + money(yExp) + '</strong><span class="small muted">点击分类看明细</span></div>' +
             propList(expMap, yExp, 'out') +
             '<div class="hr" style="margin:18px 0"></div>' +
-            '<div class="row between" style="margin-bottom:6px"><strong class="small">收入 ' + money(yInc) + '</strong></div>' +
+            '<div class="row between" style="margin-bottom:6px"><strong class="small" title="收入 ' + U.moneyFull(yInc) + '">收入 ' + money(yInc) + '</strong></div>' +
             propList(incMap, yInc, 'in')
         }) +
         UI.card({
@@ -431,7 +431,7 @@
         var g = F().goals.filter(function (a) { return a.id === t.dataset.id; })[0];
         var saved = (g.logs || []).reduce(function (s, l) { return s + num(l.amount); }, 0);
         UI.form({
-          title: '存入 ·' + g.name, desc: '已存 ' + money(saved) + ' / 目标 ' + money(g.target),
+          title: '存入 ·' + g.name, desc: '已存 ' + money(saved) + ' / 目标 ' + money(g.target) + '（' + U.moneyFull(saved) + ' / ' + U.moneyFull(g.target) + '）',
           values: { date: U.today() }, fields: [
             { k: 'amount', label: '存入金额', type: 'number', min: 0, req: true },
             { k: 'date', label: '日期', type: 'date', req: true, def: U.today() },
@@ -540,9 +540,9 @@
             var exp = arr.filter(function (f) { return f.type === 'out'; }).reduce(function (s, f) { return s + num(f.amount); }, 0);
             var tr = arr.filter(function (f) { return f.type === 'transfer'; }).reduce(function (s, f) { return s + num(f.amount); }, 0);
             return UI.stats([
-              ['收入', money(inc), true],
-              ['支出', money(exp)],
-              ['转账', money(tr)]
+              ['收入', money(inc), true, U.moneyFull(inc)],
+              ['支出', money(exp), false, U.moneyFull(exp)],
+              ['转账', money(tr), false, U.moneyFull(tr)]
             ]);
           },
           render: function (f) {
@@ -550,7 +550,7 @@
             var color = f.type === 'in' ? '#6E8A28' : f.type === 'out' ? '#B4553F' : '#6E8A9B';
             return '<div class="item"><div class="item-main">' +
               '<div class="row between" style="gap:10px"><span class="item-title">' + esc(f.type === 'transfer' ? accName(f.acc) + ' → ' + accName(f.acc2) : (f.cat || '未分类')) + '</span>' +
-              '<span style="font-weight:700;color:' + color + '">' + sign + money(f.amount) + '</span></div>' +
+              '<span style="font-weight:700;color:' + color + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;margin-left:8px;" title="' + U.moneyFull(f.amount) + '">' + sign + money(f.amount) + '</span></div>' +
               '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + '</span>' +
               (f.type !== 'transfer' ? '<span class="badge grey">' + esc(accName(f.acc)) + '</span>' : '<span class="badge info">转账</span>') +
               (f.note ? '<span>' + esc(f.note) + '</span>' : '') + '</div></div>' +
