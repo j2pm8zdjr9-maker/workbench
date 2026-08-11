@@ -260,6 +260,7 @@
     if (!activePicker) return;
     var el = activePicker.el;
     if (el && el.parentNode) el.parentNode.removeChild(el);
+    if (w.UI && w.UI.modalA11y) w.UI.modalA11y.close(el);
     activePicker = null;
     if (w.UI && w.UI.unlock) w.UI.unlock();
   }
@@ -425,6 +426,7 @@
     wrap.innerHTML = html;
     var el = wrap.firstChild;
     root.appendChild(el);
+    if (w.UI && w.UI.modalA11y) w.UI.modalA11y.open(el);
     activePicker = { modId: modId, el: el };
 
     // 事件绑定

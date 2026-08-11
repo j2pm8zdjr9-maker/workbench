@@ -164,6 +164,9 @@ a{ color:var(--olive-deep); text-decoration:none; }
 .tap:hover, .btn:hover, .pill:hover, .tab:hover, .chip:hover, .nav-item:hover, .qbtn:hover, .ov:hover, .icon-btn:hover, .check:hover, .link-btn:hover, .opt-row:hover, .home-pill:hover{ color:var(--brown); }
 .tap:active, .btn:active, .pill:active, .tab:active, .chip:active, .qbtn:active, .ov:active, .icon-btn:active, .check:active{ transform:scale(.975); }
 .tap:focus-visible{ outline:2px solid var(--olive-soft); outline-offset:2px; }
+/* 键盘焦点环：覆盖未带 .tap 的可交互元素（导航/快捷块/分页/左滑按钮等） */
+.nav-item:focus-visible, .qbtn:focus-visible, .tab:focus-visible, .pill:focus-visible, .sw-btn:focus-visible, .x-btn:focus-visible, .icon-btn:focus-visible, .pg-btn:focus-visible, .ov:focus-visible, a:focus-visible, button:focus-visible{ outline:2px solid var(--olive-soft); outline-offset:2px; }
+.modal:focus-visible, .modal-mask:focus-visible{ outline:none; }
 @media (hover:none){
   .tap:hover{ background-color:initial; }
   .pill:hover{ background:var(--card); border-color:var(--line-2); color:var(--brown-2); }

@@ -266,6 +266,7 @@
     if (!root) return;
     var el = document.createElement('div');
     el.className = 'toast'; el.textContent = msg;
+    el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
     root.appendChild(el);
     setTimeout(function () {
       el.style.transition = 'opacity .3s, transform .3s';
@@ -498,6 +499,7 @@
         '<div class="search-bar"><input class="search-input" type="search" placeholder="搜索，或输入命令，如「记一笔」「设置」…" aria-label="搜索"><button class="x-btn tap" data-x aria-label="关闭">✕</button></div>' +
         '<div class="search-results" id="searchResults"></div></div>';
       root.appendChild(el);
+      if (w.UI && w.UI.modalA11y) w.UI.modalA11y.open(el);
       var input = el.querySelector('.search-input');
       var box = el.querySelector('#searchResults');
       var items = [], active = 0;
@@ -514,7 +516,7 @@
         { key: '首页 总览', title: '回到首页总览', icon: '🏠', mod: 'home', act: '', sub: 'home' }
       ];
 
-      function close() { el.remove(); }
+      function close() { el.remove(); if (w.UI && w.UI.modalA11y) w.UI.modalA11y.close(el); }
       function runItem(it) {
         close();
         if (it.mod) self.go(it.mod);

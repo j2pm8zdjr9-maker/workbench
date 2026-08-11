@@ -32,6 +32,59 @@
     });
   }
 
+  /* ---------- 弹窗无障碍：焦点管理 ----------
+     打开时锁定背景（.app 设 inert + aria-hidden，使屏幕阅读器与键盘无法触及背景），
+     聚焦弹窗内首个可聚焦元素，Tab 在弹窗内循环，ESC 触发取消/关闭按钮，
+     关闭后把焦点归还原触发元素。用栈管理弹窗套弹窗（如表单内再弹确认框）。 */
+  var modalA11y = {
+    stack: [], prevFocus: null,
+    open: function (mask) {
+      if (!this.stack.length) {
+        try { this.prevFocus = document.activeElement; } catch (e) { this.prevFocus = null; }
+        var app = document.querySelector('.app');
+        if (app) { app.setAttribute('aria-hidden', 'true'); app.setAttribute('inert', ''); }
+      }
+      this.stack.push(mask);
+      var modal = mask.querySelector('.modal') || mask;
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      if (!modal.getAttribute('aria-label') && !modal.getAttribute('aria-labelledby'))
+        modal.setAttribute('aria-label', '对话框');
+      var sel = 'a[href],button:not([disabled]),input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+      var f = modal.querySelectorAll(sel);
+      // 优先聚焦首个输入控件（表单/搜索场景更自然），否则取 DOM 首个可聚焦元素
+      var first = modal.querySelector('input:not([type=hidden]),select,textarea') || f[0], last = f[f.length - 1];
+      if (!first) { modal.setAttribute('tabindex', '-1'); first = modal; last = modal; }
+      function onKey(e) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          var c = mask.querySelector('[data-x],[data-no]');
+          if (c) c.click(); else mask.click();
+          return;
+        }
+        if (e.key === 'Tab') {
+          if (!f.length) { e.preventDefault(); return; }
+          if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      }
+      mask._a11yKey = onKey;
+      mask.addEventListener('keydown', onKey);
+      setTimeout(function () { try { first.focus(); } catch (e) {} }, 40);
+    },
+    close: function (mask) {
+      var i = this.stack.indexOf(mask);
+      if (i >= 0) this.stack.splice(i, 1);
+      if (mask && mask._a11yKey) { try { mask.removeEventListener('keydown', mask._a11yKey); } catch (e) {} mask._a11yKey = null; }
+      if (!this.stack.length) {
+        var app = document.querySelector('.app');
+        if (app) { app.removeAttribute('aria-hidden'); app.removeAttribute('inert'); }
+        if (this.prevFocus && this.prevFocus.focus) { try { this.prevFocus.focus(); } catch (e) {} }
+        this.prevFocus = null;
+      }
+    }
+  };
+
   var UI = {
 
     /* ---------- 基础块 ---------- */
@@ -304,8 +357,9 @@
           '<div class="modal-body">' + (cfg.desc ? '<p class="small muted">' + esc(cfg.desc) + '</p>' : '') + body + liveHtml + '</div>' +
           '<div class="modal-foot"><button class="btn ghost tap" data-x>取消</button><button class="btn primary tap" data-ok>' + esc(cfg.okText || '保存') + '</button></div></div>';
         root.appendChild(el);
+        modalA11y.open(el);
 
-        function close(r) { el.remove(); UI.unlock(); resolve(r); }
+        function close(r) { el.remove(); UI.unlock(); modalA11y.close(el); resolve(r); }
         UI.lock();
 
         function fieldVal(f) {
@@ -423,7 +477,6 @@
           else { sel.dataset.prev = sel.value; }
         });
         el.addEventListener('keydown', function (e) {
-          if (e.key === 'Escape') close(null);
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { var ok = el.querySelector('[data-ok]'); if (ok) ok.click(); }
         });
 
@@ -552,12 +605,13 @@
         var root = document.getElementById('modalRoot');
         var el = document.createElement('div');
         el.className = 'modal-mask';
-        el.innerHTML = '<div class="modal" style="max-width:400px"><div class="modal-head"><h3>' + esc(title) + '</h3></div>' +
+        el.innerHTML = '<div class="modal" style="max-width:400px" role="dialog" aria-modal="true" aria-label="' + esc(title || '确认') + '"><div class="modal-head"><h3>' + esc(title) + '</h3></div>' +
           '<div class="modal-body"><p class="small muted" style="line-height:1.8">' + esc(desc || '') + '</p></div>' +
           '<div class="modal-foot"><button class="btn ghost tap" data-no>取消</button>' +
           '<button class="btn ' + (danger ? 'danger' : 'primary') + ' tap" data-yes>' + esc(okText || '确定') + '</button></div></div>';
         root.appendChild(el);
-        function close(r) { el.remove(); UI.unlock(); resolve(r); }
+        modalA11y.open(el);
+        function close(r) { el.remove(); UI.unlock(); modalA11y.close(el); resolve(r); }
         UI.lock();
         el.addEventListener('click', function (e) {
           if (e.target === el || e.target.closest('[data-no]')) close(false);
@@ -570,13 +624,14 @@
       var root = document.getElementById('modalRoot');
       var el = document.createElement('div');
       el.className = 'modal-mask';
-      el.innerHTML = '<div class="modal"><div class="modal-head"><h3>' + esc(title) + '</h3><button class="x-btn tap" data-x>✕</button></div>' +
+      el.innerHTML = '<div class="modal" role="dialog" aria-modal="true" aria-label="' + esc(title || '详情') + '"><div class="modal-head"><h3>' + esc(title) + '</h3><button class="x-btn tap" data-x aria-label="关闭">✕</button></div>' +
         '<div class="modal-body">' + bodyHtml + '</div>' +
         (footHtml ? '<div class="modal-foot">' + footHtml + '</div>' : '<div style="height:22px"></div>') + '</div>';
       root.appendChild(el);
+      modalA11y.open(el);
       UI.lock();
       el.addEventListener('click', function (e) {
-        if (e.target === el || e.target.closest('[data-x]')) { el.remove(); UI.unlock(); }
+        if (e.target === el || e.target.closest('[data-x]')) { el.remove(); UI.unlock(); modalA11y.close(el); }
       });
       return el;
     },
@@ -620,4 +675,5 @@
   };
 
   w.UI = UI;
+  w.UI.modalA11y = modalA11y;
 })(window);
