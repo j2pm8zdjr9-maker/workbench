@@ -79,13 +79,24 @@ button,input,select,textarea{ font:inherit; color:inherit; }
 a{ color:var(--olive-deep); text-decoration:none; }
 
 /* ---------- 全局统一交互反馈 ---------- */
-.tap{
+.tap, .btn, .pill, .tab, .chip, .nav-item, .qbtn, .ov, .icon-btn, .check, .link-btn, .opt-row, .home-pill, .top-fab, .item{
   cursor:pointer;
+  /* 移动端：消除双击缩放 300ms 延迟；禁用 iOS 长按呼出菜单与文本选择，更像原生 App */
+  touch-action:manipulation;
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;
+  user-select:none;
   transition: background-color var(--t), color var(--t), border-color var(--t),
               box-shadow var(--t), transform .14s var(--ease), opacity var(--t);
 }
-.tap:hover{ color:var(--brown); }
-.tap:active{ transform:scale(.975); }
+/* 内容区与表单输入保持可选/可长按 */
+.input, .textarea, .select, .item-title, .item-note, .di-dbody, .diary-editor, .privacy, .empty{
+  -webkit-user-select:auto;
+  user-select:auto;
+  -webkit-touch-callout:default;
+}
+.tap:hover, .btn:hover, .pill:hover, .tab:hover, .chip:hover, .nav-item:hover, .qbtn:hover, .ov:hover, .icon-btn:hover, .check:hover, .link-btn:hover, .opt-row:hover, .home-pill:hover{ color:var(--brown); }
+.tap:active, .btn:active, .pill:active, .tab:active, .chip:active, .qbtn:active, .ov:active, .icon-btn:active, .check:active{ transform:scale(.975); }
 .tap:focus-visible{ outline:2px solid var(--olive-soft); outline-offset:2px; }
 @media (hover:none){
   .tap:hover{ background-color:initial; }
@@ -513,6 +524,7 @@ table.tbl td.ops{ white-space:nowrap; text-align:right; }
   max-height:88vh; /* 旧浏览器兜底 */
   max-height:min(100%, calc(var(--svh-real) * .88));
   overflow:auto; overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch; /* iOS 弹窗内滚动更顺滑 */
   background:var(--card); border-radius:var(--r-l); box-shadow:0 24px 60px rgba(51,25,21,.22);
   animation:modalIn .26s var(--ease); display:flex; flex-direction:column;
 }
