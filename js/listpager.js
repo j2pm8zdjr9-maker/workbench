@@ -76,7 +76,7 @@
     var pageArr = arr.slice((pg - 1) * sz, pg * sz);
     var listHtml = pageArr.length
       ? '<div class="list">' + pageArr.map(o.render).join('') + '</div>'
-      : (UI.empty(o.empty || '还没有记录', o.emptyIcon || '🪶'));
+      : (UI.empty(o.empty || '还没有记录', o.emptyIcon || '🪶', o.emptyDesc ? { desc: o.emptyDesc } : undefined));
     return listHtml + pagerHTML(ns, total, pages, pg, sz);
   }
 

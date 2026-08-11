@@ -149,10 +149,12 @@
       if (!Store._loaded) return;
       try {
         localStorage.setItem(KEY, JSON.stringify(this.data));
+        this.ok = true;
         if (!silent) flashSaved();
       } catch (e) {
         this.ok = false;
-        toast('保存失败：浏览器存储空间不足或被禁用');
+        flashSaveError();
+        toast('保存失败：' + (e && e.name === 'QuotaExceededError' ? '浏览器存储空间不足' : '存储可能被禁用'));
       }
       try { if (!Store._restoring) IDB.put(KEY, this.data); } catch (e) {}
       if (w.Backup) w.Backup.schedule();
@@ -167,9 +169,19 @@
   function flashSaved() {
     var el = document.getElementById('saveFlag');
     if (!el) return;
+    el.textContent = '已保存';
+    el.classList.remove('warn');
     el.classList.add('show');
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () { el.classList.remove('show'); }, 1200);
+  }
+  function flashSaveError() {
+    var el = document.getElementById('saveFlag');
+    if (!el) return;
+    el.textContent = '⚠️ 保存失败';
+    el.classList.add('show', 'warn');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { el.classList.remove('show', 'warn'); el.textContent = '已保存'; }, 2600);
   }
 
   /* ---------- 工具 ---------- */

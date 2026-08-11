@@ -54,8 +54,14 @@
       return h + '</div>';
     },
 
-    empty: function (text, icon) {
-      return '<div class="empty"><span class="e-ico">' + (icon || '🪶') + '</span>' + esc(text || '还没有记录，点上方按钮添加吧') + '</div>';
+    empty: function (text, icon, opts) {
+      opts = opts || {};
+      return '<div class="empty">' +
+        '<span class="e-ico">' + (icon || '🪶') + '</span>' +
+        '<div class="e-t">' + esc(text || '还没有记录，点上方按钮添加吧') + '</div>' +
+        (opts.desc ? '<div class="e-d">' + esc(opts.desc) + '</div>' : '') +
+        (opts.cta ? '<div class="e-cta">' + opts.cta + '</div>' : '') +
+        '</div>';
     },
 
     check: function (on, act, id, mini) {

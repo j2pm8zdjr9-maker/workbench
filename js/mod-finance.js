@@ -192,7 +192,7 @@
           UI.pills([{ k: '', t: '全部类型' }, { k: 'in', t: '收入' }, { k: 'out', t: '支出' }, { k: 'transfer', t: '转账' }], type, 'ftype') +
           (F().accounts.length ? UI.pills([{ k: '', t: '全部账户' }].concat(F().accounts.map(function (a) { return { k: a.id, t: a.name }; })), acc, 'facc') : '') +
           '</div><div style="height:18px"></div>' +
-          ListPager.out({ ns: 'finance:flow', items: arr, defSize: 5, empty: '这个时间段还没有流水记录', emptyIcon: '🧾', render: renderFlowItem })
+          ListPager.out({ ns: 'finance:flow', items: arr, defSize: 5, empty: '这个时间段还没有流水记录', emptyIcon: '🧾', emptyDesc: '点右上角「+ 记一笔」记录你的第一笔收支', render: renderFlowItem })
       });
     },
 

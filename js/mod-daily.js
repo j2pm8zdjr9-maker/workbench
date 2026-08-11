@@ -404,7 +404,7 @@
         (habits.length ?
           '<div class="list" style="margin-top:4px">' + ListPager.slice('checkin:list', habits).map(renderHabit).join('') + '</div>' + ListPager.pager('checkin:list', habits.length) :
           (all.length ? UI.empty('「' + U.fmtDate(cur.day, true) + '」没有进行中的打卡任务', '🌿')
-                      : UI.empty('还没有打卡任务，点右上角「+ 新增打卡」开始', '🌿'))) +
+                      : UI.empty('还没有打卡任务，点右上角「+ 新增打卡」开始', '🌿', { desc: '每天完成一个小习惯，长期积累就是质变' }))) +
         (total && isToday && done === total ? '<div class="accent-note" style="margin-top:8px">🎉 今日全部打卡完成，继续保持！</div>' : '');
 
       return UI.card({

@@ -243,6 +243,7 @@ a{ color:var(--olive-deep); text-decoration:none; }
   padding:4px 10px; border-radius:20px; opacity:0; transition:opacity .3s var(--ease);
 }
 .save-flag.show{ opacity:1; }
+.save-flag.warn{ color:#fff; background:var(--danger); }
 
 /* 一键置顶悬浮按钮 */
 .top-fab{
@@ -483,10 +484,14 @@ a{ color:var(--olive-deep); text-decoration:none; }
 
 /* 空状态 */
 .empty{
-  padding:38px 20px; text-align:center; color:var(--brown-4); font-size:13.5px;
-  border:1px dashed var(--line-2); border-radius:var(--r); background:var(--cream-soft);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  padding:40px 20px; text-align:center; border:1px dashed var(--line-2); border-radius:var(--r); background:var(--cream-soft);
 }
-.empty .e-ico{ font-size:24px; display:block; margin-bottom:8px; filter:grayscale(.3); opacity:.75; }
+.empty .e-ico{ font-size:30px; width:60px; height:60px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:var(--olive-05); margin-bottom:6px; }
+.empty .e-t{ font-size:14.5px; font-weight:600; color:var(--brown-2); line-height:1.5; }
+.empty .e-d{ font-size:13px; color:var(--brown-3); max-width:280px; line-height:1.6; }
+.empty .e-cta{ margin-top:10px; }
+.empty .e-cta .btn{ min-width:150px; }
 
 /* 表格（窄屏自动转卡片） */
 .table-wrap{ width:100%; overflow-x:auto; }

@@ -181,7 +181,7 @@
       });
       return ListPager.out({
         ns: 'media:list', items: list, sortKeys: mediaSortKeys, defSize: 5,
-        empty: '还没有记录，添加第一部吧', emptyIcon: '🍿',
+        empty: '还没有记录，添加第一部吧', emptyIcon: '🍿', emptyDesc: '看书、追剧、看电影都能记，自动生成年度回顾',
         render: renderMediaItem
       });
     },
