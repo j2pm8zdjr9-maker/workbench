@@ -88,6 +88,21 @@
       return Cats.get(ns).map(function (c) { return '<option value="' + U.esc(c) + '">' + U.esc(c) + '</option>'; }).join('');
     },
 
+    /* 各命名空间独立的「直接显示分类数」（catPin）。全局默认 3，可逐命名空间覆盖。
+       切换某命名空间后只影响该命名空间，其他命名空间仍取默认 3。 */
+    pin: function (ns) {
+      var m = Store.data.ui && Store.data.ui.catPin;
+      if (m && typeof m === 'object') return Math.max(2, Math.min(10, m[ns] || 3));
+      return Math.max(2, Math.min(10, (typeof m === 'number' ? m : 3)));
+    },
+    setPin: function (ns, v) {
+      var m = Store.data.ui && Store.data.ui.catPin;
+      if (!m || typeof m !== 'object') m = {};
+      m[ns] = Math.max(2, Math.min(10, v));
+      Store.data.ui.catPin = m;
+      Store.save();
+    },
+
     /* ---------- 筛选条（首页/列表通用，节省屏幕空间） ----------
        规则：「全部」固定显示；除「全部」外，同一行直接显示 catPin 个胶囊。
        其中最后一个（第 catPin 个）是「灵活胶囊」：默认显示「更多 ▾」，点击后
@@ -103,7 +118,7 @@
     filterBar: function (ns, cur, opts) {
       opts = opts || {};
       var all = Cats.get(ns);
-      var catPin = opts.pin || (Store.data.ui && Store.data.ui.catPin) || 3;
+      var catPin = opts.pin || Cats.pin(ns);
       var fixedN = Math.max(0, catPin - 1);          // 固定分类数
       var pinned = all.slice(0, fixedN);
       var rest = all.slice(fixedN);
@@ -121,7 +136,7 @@
     /* 打开「剩余分类」选择器（固定分类之后的剩余分类 + 无分类）。
        onPick 可选；不传时走 setPicker 注册的回调（主视图场景）。 */
     openPicker: function (ns, cur, onPick) {
-      var catPin = (Store.data.ui && Store.data.ui.catPin) || 3;
+      var catPin = Cats.pin(ns);
       var rest = Cats.get(ns).slice(Math.max(0, catPin - 1));
       var cb = onPick || Cats._onPick[ns];
       var render = function () {
@@ -150,7 +165,7 @@
     manage: function (ns, title) {
       var render = function () {
         var cats = Cats.get(ns);
-        var pin = Math.max(2, Math.min(10, (Store.data.ui && Store.data.ui.catPin) || 3));
+        var pin = Cats.pin(ns);
         return '<div class="cat-pin-box">' +
           '<div class="cat-pin-label">除「全部」外直接显示的分类数<span class="small muted">（最后一个为灵活胶囊，其余收进「更多」）</span></div>' +
           '<div class="row" style="gap:10px;align-items:center">' +
@@ -174,9 +189,9 @@
       var el = UI.sheet(title || '分类管理', render(), '<button class="btn ghost tap" data-x>关闭</button>');
       var body = el.querySelector('.modal-body');
       function setPin(delta) {
-        var cur = Math.max(2, Math.min(10, (Store.data.ui && Store.data.ui.catPin) || 3));
-        Store.data.ui.catPin = Math.max(2, Math.min(10, cur + delta));
-        Store.save(); body.innerHTML = render(); App.refresh();
+        var cur = Cats.pin(ns);
+        Cats.setPin(ns, cur + delta);
+        body.innerHTML = render(); App.refresh();
       }
       el.addEventListener('click', function (e) {
         var b = e.target.closest('[data-act]');

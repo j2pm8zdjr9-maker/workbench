@@ -28,6 +28,7 @@
         '<span class="row" style="gap:6px;align-items:center;flex-shrink:0">' + UI.scoreTag(x.score) + ' <span style="font-size:11px;color:#999">▸</span></span></div>' +
         '<div class="item-meta">' + statusBadge +
         (x.tag ? '<span class="badge grey">' + esc(x.tag) + '</span>' : '') +
+        pageBadge(x) +
         '<span>' + (x.start ? U.fmtDate(x.start) : '—') + ' → ' + (x.end ? U.fmtDate(x.end) : '进行中') + '</span>' +
         '</div></div></div>';
     }
@@ -41,6 +42,7 @@
       (x.end ? '<span class="badge">已完结</span>' : '<span class="badge info">进行中</span>') +
       (x.type === 'book' && x.status ? '<span class="badge ' + (x.status === '在读' ? 'info' : x.status === '已读' ? '' : 'grey') + '">' + esc(x.status) + '</span>' : '') +
       (x.tag ? '<span class="badge grey">' + esc(x.tag) + '</span>' : '') +
+      pageBadge(x) +
       '<span>' + (x.start ? U.fmtDate(x.start) : '—') + ' → ' + (x.end ? U.fmtDate(x.end) : '进行中') + '</span>' +
       (x.start && x.end ? '<span class="badge grey">历时 ' + (U.dayDiff(x.start, x.end) + 1) + ' 天</span>' : '') +
       (total > 0 ? '<span class="badge">⏱ 累计' + dur(total) + '</span>' : '') +
@@ -48,6 +50,7 @@
       (x.review ? '<div class="item-note">' + esc(x.review) + '</div>' : '') +
       '</div>' +
       UI.ops(x.id, 'edit', 'del',
+        (x.type === 'book' ? '<button class="link-btn tap" data-act="logpage" data-id="' + x.id + '">记页码</button>' : '') +
         (x.end ? '' : '<button class="link-btn tap" data-act="finish" data-id="' + x.id + '">完结</button>') +
         '<button class="link-btn tap" data-act="logtime" data-id="' + x.id + '">记时长</button>') +
       '</div>';
@@ -64,6 +67,8 @@
     ];
     if (type === 'book') {
       f.splice(3, 0, { k: 'status', label: '阅读状态', type: 'select', options: ['想读', '在读', '已读'], def: '在读', hint: '「在读」的书会出现在首页「记录读书时长」的快捷选择里' });
+      f.splice(4, 0, { k: 'pages', label: '总页数', type: 'number', min: 0, ph: '如：320' });
+      f.splice(5, 0, { k: 'page', label: '当前读到第几页', type: 'number', min: 0, ph: '如：120' });
     }
     return f;
   }
@@ -73,6 +78,14 @@
     if (!mins) return '0 分钟';
     var h = Math.floor(mins / 60), m = mins % 60;
     return (h ? h + ' 小时' : '') + (m ? m + ' 分钟' : (h ? '' : '0 分钟'));
+  }
+  function pageBadge(x) {
+    if (x.type !== 'book') return '';
+    var p = num(x.page) || 0, total = num(x.pages);
+    if (!p && !total) return '';
+    var txt = '📄 ' + p + (total ? ' / ' + total : '') + ' 页';
+    if (total) txt += ' · ' + Math.round(p / total * 100) + '%';
+    return '<span class="badge grey">' + txt + '</span>';
   }
   function addReadLog(id) {
     var x = D().media.filter(function (a) { return a.id === id; })[0];
@@ -128,6 +141,7 @@
               return '<div class="item"><div class="item-main">' +
                 '<div class="item-title">' + MT[x.type].i + ' ' + esc(x.title) + '</div>' +
                 '<div class="item-meta"><span class="badge grey">' + MT[x.type].t + '</span>' +
+                pageBadge(x) +
                 (x.tag ? '<span class="badge">' + esc(x.tag) + '</span>' : '') +
                 (x.score !== '' && x.score !== undefined ? '<span>评分 ' + num(x.score) + '</span>' : '') +
                 (total > 0 ? '<span class="badge">⏱ 累计' + dur(total) + '</span>' : '') +
@@ -173,13 +187,19 @@
     },
 
     yearly: function (arr, type) {
+      var aType = App.tab('media', 'archType', 'all');
       var map = {};
-      arr.forEach(function (x) { if (x.end) { var y = U.yr(x.end); (map[y] = map[y] || []).push(x); } });
+      arr.forEach(function (x) {
+        if (!x.end) return;
+        if (aType !== 'all' && x.type !== aType) return;
+        var y = U.yr(x.end); (map[y] = map[y] || []).push(x);
+      });
       var years = Object.keys(map).sort().reverse();
       if (!years.length) return '';
+      var apills = [{ k: 'all', t: '全部' }].concat(Object.keys(MT).map(function (k) { return { k: k, t: MT[k].t }; }));
       return UI.card({
         title: '📅 年度归档', sub: '点击「查看」浏览该年完结作品',
-        body: years.map(function (y) {
+        body: UI.pills(apills, aType, 'archType') + '<div style="height:10px"></div>' + years.map(function (y) {
           var l = map[y], sc = l.filter(function (x) { return x.score !== '' && x.score !== undefined; });
           var av = sc.length ? (sc.reduce(function (s, x) { return s + num(x.score); }, 0) / sc.length).toFixed(1) : '—';
           var top = U.sortBy(sc, 'score', true)[0];
@@ -193,6 +213,7 @@
 
     acts: {
       type: function (t) { App.setTab('media', 'type', t.dataset.k); App.setTab('media', 'st', 'all'); ListPager.resetPg('media:list'); App.refresh(); },
+      archType: function (t) { App.setTab('media', 'archType', t.dataset.k); App.refresh(); },
       st: function (t) { App.setTab('media', 'st', t.dataset.k); ListPager.resetPg('media:list'); App.refresh(); },
       mexp: function (t) { mediaExpanded = mediaExpanded === t.dataset.id ? null : t.dataset.id; App.refresh(); },
       hist: function () {
@@ -255,7 +276,8 @@
       },
       viewYear: function (t) {
         var y = t.dataset.k;
-        UI.sheet(y + ' 年归档', viewYearContent(y), '<button class="btn ghost tap" data-x>关闭</button>');
+        var aType = App.tab('media', 'archType', 'all');
+        UI.sheet(y + ' 年归档', viewYearContent(y, aType), '<button class="btn ghost tap" data-x>关闭</button>');
       },
       new: function () {
         var type = App.tab('media', 'type', 'movie');
@@ -297,6 +319,22 @@
       },
       minfo: function (t) { openMediaInfo(t.dataset.id); },
       logtime: function (t) { addReadLog(t.dataset.id); },
+      logpage: function (t) {
+        var x = D().media.filter(function (a) { return a.id === t.dataset.id; })[0];
+        if (!x) return;
+        UI.form({
+          title: '记录页码 ·《' + x.title + '》',
+          values: { pages: x.pages || '', page: x.page || '' },
+          fields: [
+            { k: 'pages', label: '总页数', type: 'number', min: 0, ph: '如：320' },
+            { k: 'page', label: '当前读到第几页', type: 'number', min: 0, ph: '如：120' }
+          ]
+        }).then(function (v) {
+          if (!v) return;
+          x.pages = num(v.pages); x.page = num(v.page);
+          Store.save(); App.refresh(); U.toast('已更新页码');
+        });
+      },
       calPrev: function (t) { Cal.act(t); },
       calNext: function (t) { Cal.act(t); },
       calToday: function (t) { Cal.act(t); },
@@ -371,10 +409,12 @@
       UI.ops(x.id, 'nedit', 'ndel') + '</div>';
   }
 
-  function viewYearContent(y) {
-    var l = D().media.filter(function (x) { return x.end && U.yr(x.end) === y; });
+  function viewYearContent(y, type) {
+    type = type || 'all';
+    var l = D().media.filter(function (x) { return x.end && U.yr(x.end) === y && (type === 'all' || x.type === type); });
     var byType = { movie: 0, tv: 0, book: 0 };
     l.forEach(function (x) { byType[x.type] = (byType[x.type] || 0) + 1; });
+    var bookPages = l.filter(function (x) { return x.type === 'book'; }).reduce(function (s, x) { return s + (num(x.page) || 0); }, 0);
     var sc = l.filter(function (x) { return x.score !== '' && x.score !== undefined && x.score !== null; });
     var av = sc.length ? (sc.reduce(function (s, x) { return s + num(x.score); }, 0) / sc.length).toFixed(1) : '—';
     var top = U.sortBy(sc, 'score', true)[0];
@@ -382,7 +422,8 @@
       ['完结', l.length + ' 部', true],
       ['平均评分', av],
       ['年度最佳', top ? num(top.score) : '—'],
-      ['影 / 剧 / 书', byType.movie + ' / ' + byType.tv + ' / ' + byType.book]
+      ['影 / 剧 / 书', byType.movie + ' / ' + byType.tv + ' / ' + byType.book],
+      ['读书页数', bookPages ? bookPages + ' 页' : '—']
     ]) + '<div style="height:14px"></div>';
     if (top) body += '<div class="muted small" style="margin-bottom:10px">⭐ 年度最高分：《' + esc(top.title) + '》 ' + num(top.score) + ' 分</div>';
     var sorted = l.slice().sort(function (a, b) { return String(b.end).localeCompare(String(a.end)); });
@@ -395,6 +436,7 @@
           '<span class="badge">' + MT[x.type].t + '</span>' +
           (x.type === 'book' && x.status ? '<span class="badge ' + (x.status === '在读' ? 'info' : x.status === '已读' ? '' : 'grey') + '">' + esc(x.status) + '</span>' : '') +
           (x.tag ? '<span class="badge grey">' + esc(x.tag) + '</span>' : '') +
+          pageBadge(x) +
           '<span>' + (x.start ? U.fmtDate(x.start) : '—') + ' → ' + U.fmtDate(x.end) + '</span>' +
           (total > 0 ? '<span class="badge">⏱ ' + dur(total) + '</span>' : '') +
           '</div>' +
@@ -413,6 +455,7 @@
       '<div class="item-title">' + MT[x.type].i + ' ' + esc(x.title) + '</div>' +
       '<div class="item-meta"><span class="badge">' + MT[x.type].t + '</span>' +
       (x.end ? '<span class="badge info">已完结</span>' : '<span class="badge grey">进行中</span>') +
+      pageBadge(x) +
       (x.tag ? '<span class="badge">' + esc(x.tag) + '</span>' : '') + '</div>' +
       (x.review ? '<div class="item-note">' + esc(x.review) + '</div>' : '') + '</div></div>' +
       '<div class="row between" style="margin:6px 0 10px"><strong>累计' + MT[x.type].v + '时长</strong><span class="badge">' + dur(total) + '</span></div>';

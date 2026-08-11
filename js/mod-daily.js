@@ -554,9 +554,10 @@
     var caret = '<span style="flex-shrink:0;color:#bbb;font-size:12px;margin-left:6px">' + (expanded ? '▾' : '▸') + '</span>';
     var titleRow = '<div class="row between" style="align-items:center"><div class="item-title" style="min-width:0">' + esc(x.title) + '</div>' + caret + '</div>';
     if (!expanded) {
+      var quickArch = (!isDone && x.status !== 'archive') ? ' <button class="link-btn tap" data-act="arch" data-id="' + x.id + '">标未完成</button>' : '';
       return '<div class="item' + (isDone ? ' done' : '') + '" data-act="texpand" data-id="' + x.id + '">' +
         UI.check(isDone, 'done', x.id) +
-        '<div class="item-main">' + titleRow + meta + '</div></div>';
+        '<div class="item-main">' + titleRow + meta + quickArch + '</div></div>';
     }
     var subHtml = subs.length ? '<div class="subs">' + subs.map(function (s) {
       return '<div class="sub' + (s.done ? ' done' : '') + '">' + UI.check(s.done, 'sub', x.id + '|' + s.id, true) +
@@ -649,12 +650,14 @@
       var all = D().tasks;
       var overdue = all.filter(function (x) { return x.due && x.status !== 'done' && x.status !== 'archive' && U.dayDiff(U.today(), x.due) < 0; }).length;
       var todayN = all.filter(function (x) { return x.due === U.today() && x.status !== 'done' && x.status !== 'archive'; }).length;
+      var archiveN = all.filter(function (x) { return x.status === 'archive'; }).length;
 
-      return UI.head('📌 任务待办', '待办 = 还没开始办；未完成 = 忘了办、时间已过无法补办') +
+      return UI.head('📌 任务待办', '待办 = 还没开始办；未完成 = 逾期且无法补办，单独归档管理') +
         UI.stats([
           ['进行中', all.filter(function (x) { return x.status === 'doing'; }).length],
           ['今日到期', todayN, todayN > 0],
           ['已逾期', overdue],
+          ['未完成', archiveN, archiveN > 0],
           ['已完成', all.filter(function (x) { return x.status === 'done'; }).length]
         ]) +
         UI.card({
