@@ -236,6 +236,20 @@ a{ color:var(--olive-deep); text-decoration:none; }
 .search-res .sr-title{ font-size:14.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .search-res .sr-sub{ font-size:12.5px; color:var(--brown-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .search-res .sr-mod{ font-size:12px; color:var(--brown-4); flex:0 0 auto; }
+.search-res.on{ background:var(--olive-10); box-shadow:inset 3px 0 0 var(--olive); }
+
+/* 左滑手势动作区（仅触控设备启用，由 JS 加 .swipeable） */
+.item.swipeable{ position:relative; overflow:hidden; }
+.item.swipeable .item-inner{ position:relative; z-index:2; background:var(--card); transition:transform .25s var(--ease); will-change:transform; }
+.item.swipeable.sw-drag .item-inner{ transition:none; }
+.item.swipeable .swipe-actions{ position:absolute; top:0; right:0; bottom:0; z-index:1; display:flex; }
+.item.swipeable .sw-btn{ border:0; color:#fff; font-size:14px; padding:0 22px; display:flex; align-items:center; }
+.item.swipeable .sw-btn.edit{ background:var(--olive); }
+.item.swipeable .sw-btn.del{ background:var(--danger); }
+@media (hover: none), (pointer: coarse){
+  .item.swipeable .item-ops{ display:none; }
+  .item.swipeable + .item-ops{ display:none; }
+}
 
 .scrim{
   position:fixed; inset:0; background:rgba(51,25,21,.34);

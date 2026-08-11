@@ -434,6 +434,119 @@
       });
     },
 
+    /* ---------- 左滑手势：列表项左滑露出编辑/删除（仅触控设备） ----------
+       自动探测每个 .item 内已有的「编辑 / 删除」按钮，复制其 data-act 与 data-* 生成滑动动作区，
+       无需各模块单独标注；点击动作按钮与点击原按钮走同一套事件委托（mod.acts）。 */
+    swipeActions: function (root) {
+      if (!root) return;
+      if (!window.matchMedia || !window.matchMedia('(hover: none), (pointer: coarse)').matches) return;
+      var items = root.querySelectorAll('.item');
+      [].forEach.call(items, function (it) {
+        if (it.dataset.swInit) return;
+        var editAct = it.getAttribute('data-sw-edit');
+        var delAct = it.getAttribute('data-sw-del');
+        var editBtn = null, delBtn = null;
+        if (editAct || delAct) {
+          if (editAct) editBtn = makeFromItem(it, editAct);
+          if (delAct) delBtn = makeFromItem(it, delAct);
+        } else {
+          var btns = [];
+          [].forEach.call(it.querySelectorAll('button[data-act]'), function (b) { btns.push(b); });
+          var sib = it.nextElementSibling;
+          if (sib && sib.classList.contains('item-ops')) [].forEach.call(sib.querySelectorAll('button[data-act]'), function (b) { btns.push(b); });
+          [].forEach.call(btns, function (b) {
+            var act = b.dataset.act || '', txt = (b.textContent || '').trim();
+            if (!delBtn && (b.classList.contains('del') || /del$/i.test(act) || txt.indexOf('删除') >= 0)) delBtn = b;
+            else if (!editBtn && (/edit$/i.test(act) || txt.indexOf('编辑') >= 0 || txt.indexOf('修改') >= 0)) editBtn = b;
+          });
+        }
+        if (!editBtn && !delBtn) return;
+        it.dataset.swInit = '1';
+        it.classList.add('swipeable');
+        var inner = document.createElement('div');
+        inner.className = 'item-inner';
+        while (it.firstChild) inner.appendChild(it.firstChild);
+        it.appendChild(inner);
+        var acts = document.createElement('div');
+        acts.className = 'swipe-actions';
+        if (editBtn) acts.appendChild(cloneAction('编辑', 'edit', editBtn));
+        if (delBtn) acts.appendChild(cloneAction('删除', 'del', delBtn));
+        it.appendChild(acts);
+        attachSwipe(it, inner, acts);
+      });
+      function cloneAction(label, kind, src) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'sw-btn ' + kind + ' tap';
+        b.textContent = label;
+        b.setAttribute('data-act', src.dataset.act);
+        [].forEach.call(src.attributes, function (a) {
+          if (a.name.indexOf('data-') === 0) b.setAttribute(a.name, a.value);
+        });
+        return b;
+      }
+      function makeFromItem(item, act) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'sw-btn';
+        b.setAttribute('data-act', act);
+        [].forEach.call(item.attributes, function (a) {
+          if (a.name.indexOf('data-') === 0 && a.name !== 'data-sw-edit' && a.name !== 'data-sw-del' && a.name !== 'data-act') b.setAttribute(a.name, a.value);
+        });
+        return b;
+      }
+      function attachSwipe(item, inner, acts) {
+        var max = 0;
+        function measure() { max = acts.offsetWidth || 0; }
+        measure();
+        var sx = 0, sy = 0, drag = false, decided = false, horiz = false, moved = false, opened = false, suppress = false;
+        item.addEventListener('pointerdown', function (e) {
+          if (e.target.closest('.sw-btn')) return;
+          measure();
+          sx = e.clientX; sy = e.clientY; drag = true; decided = false; horiz = false; moved = false;
+          try { item.setPointerCapture(e.pointerId); } catch (err) {}
+        });
+        item.addEventListener('pointermove', function (e) {
+          if (!drag) return;
+          var mx = e.clientX - sx, my = e.clientY - sy;
+          if (!decided) {
+            if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
+            decided = true; horiz = Math.abs(mx) > Math.abs(my);
+            if (!horiz) { drag = false; return; }
+            item.classList.add('sw-drag');
+          }
+          var dx = (opened ? mx - (-max) : mx);
+          dx = Math.max(-max, Math.min(0, dx));
+          inner.style.transition = 'none';
+          inner.style.transform = 'translateX(' + dx + 'px)';
+          if (Math.abs(mx) > 4) moved = true;
+        });
+        function end() {
+          if (!drag) return;
+          drag = false; item.classList.remove('sw-drag');
+          inner.style.transition = '';
+          var cur = 0, m = inner.style.transform.match(/-?\d+(\.\d+)?/);
+          if (m) cur = parseFloat(m[0]);
+          if (cur < -max / 2) { opened = true; inner.style.transform = 'translateX(' + (-max) + 'px)'; }
+          else { opened = false; inner.style.transform = 'translateX(0)'; }
+          if (moved) { suppress = true; setTimeout(function () { suppress = false; }, 0); }
+        }
+        item.addEventListener('pointerup', end);
+        item.addEventListener('pointercancel', end);
+        item.addEventListener('click', function (e) {
+          if (opened && !e.target.closest('.sw-btn')) {
+            e.preventDefault(); e.stopPropagation();
+            opened = false; inner.style.transform = 'translateX(0)';
+            return;
+          }
+          if (suppress) {
+            if (e.target.closest('.sw-btn')) { suppress = false; return; } // 左滑动作按钮正常触发
+            e.preventDefault(); e.stopPropagation(); suppress = false;
+          }
+        }, true);
+      }
+    },
+
     confirm: function (title, desc, okText, danger) {
       return new Promise(function (resolve) {
         var root = document.getElementById('modalRoot');

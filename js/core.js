@@ -338,6 +338,7 @@
       });
       if (mod.mount) mod.mount(view);
       this.bindView(view, mod);
+      if (w.UI && UI.swipeActions) UI.swipeActions(view);
     },
 
     // 局部重绘（保持滚动位置）
@@ -493,33 +494,74 @@
       var root = document.getElementById('modalRoot');
       var el = document.createElement('div');
       el.className = 'modal-mask';
-      el.innerHTML = '<div class="modal search-modal" role="dialog" aria-modal="true" aria-label="全局搜索">' +
-        '<div class="search-bar"><input class="search-input" type="search" placeholder="搜索模块、记账、任务、日记…" aria-label="搜索"><button class="x-btn tap" data-x aria-label="关闭">✕</button></div>' +
-        '<div class="search-results" id="searchResults"><div class="search-hint">输入关键词，跨所有模块搜索内容</div></div></div>';
+      el.innerHTML = '<div class="modal search-modal" role="dialog" aria-modal="true" aria-label="全局搜索与命令">' +
+        '<div class="search-bar"><input class="search-input" type="search" placeholder="搜索，或输入命令，如「记一笔」「设置」…" aria-label="搜索"><button class="x-btn tap" data-x aria-label="关闭">✕</button></div>' +
+        '<div class="search-results" id="searchResults"></div></div>';
       root.appendChild(el);
       var input = el.querySelector('.search-input');
       var box = el.querySelector('#searchResults');
+      var items = [], active = 0;
       setTimeout(function () { try { input.focus(); } catch (e) {} }, 60);
+
+      var COMMANDS = [
+        { key: '记一笔 记账 支出 收入', title: '记一笔', icon: '💰', mod: 'finance', act: 'fnew', sub: '快速记账' },
+        { key: '新建账户 账户', title: '新建记账账户', icon: '🏦', mod: 'finance', act: 'anew', sub: 'finance' },
+        { key: '新建任务 待办', title: '新建任务', icon: '📝', mod: 'tasks', act: 'new', sub: 'tasks' },
+        { key: '新建打卡 习惯', title: '新建打卡任务', icon: '✅', mod: 'checkin', act: 'newHabit', sub: 'checkin' },
+        { key: '添加愿望 愿望', title: '添加愿望', icon: '⭐', mod: 'wish', act: 'new', sub: 'wish' },
+        { key: '写日记 日记', title: '写日记', icon: '📔', mod: 'diary', act: 'new', sub: 'diary' },
+        { key: '设置 主题 外观 备份', title: '打开设置', icon: '⚙️', mod: 'settings', act: '', sub: 'settings' },
+        { key: '首页 总览', title: '回到首页总览', icon: '🏠', mod: 'home', act: '', sub: 'home' }
+      ];
+
       function close() { el.remove(); }
+      function runItem(it) {
+        close();
+        if (it.mod) self.go(it.mod);
+        if (it.act) {
+          var m = self.modules[it.mod];
+          if (m && m.acts && m.acts[it.act]) setTimeout(function () { m.acts[it.act](); }, 90);
+        }
+      }
       function render(q) {
-        q = q || '';
-        if (!q.trim()) { box.innerHTML = '<div class="search-hint">输入关键词，跨所有模块搜索内容</div>'; return; }
-        var list = self.globalSearch(q);
-        if (!list.length) { box.innerHTML = '<div class="search-empty">没有找到与「' + esc(q.trim()) + '」相关的内容</div>'; return; }
-        box.innerHTML = list.map(function (r) {
-          return '<button class="search-res tap" data-mod="' + r.mod + '"><span class="sr-ico">' + r.icon + '</span>' +
-            '<span class="sr-main"><span class="sr-title">' + esc(r.title) + '</span>' +
-            (r.sub ? '<span class="sr-sub">' + esc(r.sub) + '</span>' : '') + '</span>' +
-            '<span class="sr-mod">' + esc(r.modName || '') + '</span></button>';
+        q = (q || '').trim();
+        items = [];
+        if (!q) {
+          items = COMMANDS.map(function (c) { return { cmd: true, icon: c.icon, title: c.title, sub: c.sub, mod: c.mod, act: c.act }; });
+        } else {
+          var ql = q.toLowerCase();
+          COMMANDS.forEach(function (c) { if ((c.key + c.title).toLowerCase().indexOf(ql) >= 0) items.push({ cmd: true, icon: c.icon, title: c.title, sub: c.sub, mod: c.mod, act: c.act }); });
+          self.globalSearch(q).forEach(function (r) { items.push({ cmd: false, icon: r.icon, title: r.title, sub: r.sub, mod: r.mod, modName: r.modName }); });
+        }
+        if (!items.length) { box.innerHTML = '<div class="search-empty">没有找到与「' + esc(q) + '」相关的内容或命令</div>'; return; }
+        active = 0;
+        box.innerHTML = items.map(function (it, i) {
+          return '<button class="search-res tap' + (i === 0 ? ' on' : '') + '" data-idx="' + i + '">' +
+            '<span class="sr-ico">' + it.icon + '</span>' +
+            '<span class="sr-main"><span class="sr-title">' + esc(it.title) + '</span>' +
+            (it.sub ? '<span class="sr-sub">' + esc(it.sub) + '</span>' : '') + '</span>' +
+            '<span class="sr-mod">' + (it.cmd ? '命令' : esc(it.modName || '')) + '</span></button>';
         }).join('');
       }
+      function setActive(i) {
+        if (!items.length) return;
+        active = (i + items.length) % items.length;
+        [].forEach.call(box.querySelectorAll('.search-res'), function (b, idx) { b.classList.toggle('on', idx === active); });
+        var on = box.querySelector('.search-res.on'); if (on) on.scrollIntoView({ block: 'nearest' });
+      }
       input.addEventListener('input', function () { render(input.value); });
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowDown') { e.preventDefault(); setActive(active + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active - 1); }
+        else if (e.key === 'Enter') { e.preventDefault(); if (items[active]) runItem(items[active]); }
+      });
       el.addEventListener('click', function (e) {
         if (e.target === el || e.target.closest('[data-x]')) return close();
         var r = e.target.closest('.search-res');
-        if (r) { close(); self.go(r.dataset.mod); }
+        if (r) runItem(items[+r.dataset.idx]);
       });
       el.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+      render('');
     }
   };
 
