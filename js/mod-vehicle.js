@@ -207,19 +207,17 @@
     /* ============ 电车管理 ============ */
     ev: function () {
       var e = ev();
-      var cfgCard = UI.card({
-        title: '⚙️ 电车配置', sub: '电池容量与电价，用于自动换算',
-        right: '<button class="btn sm tap" data-act="evcfg">⚙️ 配置</button>',
+      var svc = serviceStatus(e, currentOdo('ev'));
+      var cfgSvcCard = UI.card({
+        title: '⚙️ 电车配置与保养' + (svc.warn ? ' <span class="badge danger">需关注</span>' : ''),
+        sub: '电池、电价、保养里程与日期',
+        right: '<button class="btn sm tap" data-act="evcfg">设置</button>',
         body: UI.stats([
           ['电池容量', num(e.battery) + ' 度'],
-          ['电价', U.money(num(e.price)) + ' /度']
-        ])
-      });
-      var svc = serviceStatus(e, currentOdo('ev'));
-      var svcCard = UI.card({
-        title: '🔧 保养提醒', sub: svc.warn ? '<span class="badge danger">需关注</span>' : '',
-        right: '<button class="btn sm tap" data-act="esvc">设置</button>',
-        body: '<div class="small muted" style="line-height:1.9">' + esc(svc.text) + '</div>'
+          ['电价', U.money(num(e.price)) + ' /度'],
+          ['保养里程', num(e.serviceMile) > 0 ? num(e.serviceMile) + ' km' : '未设置'],
+          ['保养日期', e.serviceDate || '未设置']
+        ]) + '<div class="small muted" style="line-height:1.8;margin-top:10px">' + esc(svc.text) + '</div>'
       });
       // 记录列表（按充电前总里程算相邻里程差）—— 先算 kmMap/all，统计才能吃到地点筛选结果
       var srt = sortedCharges();
@@ -265,7 +263,7 @@
         right: '<button class="btn ghost sm tap" data-act="evHist">📜 历史记录</button><button class="btn primary sm tap" data-act="enew">+ 记充电</button>',
         body: rows + (all.length ? pagerHtml(all.length, { v: evPg }, { v: evSz }, 'evPage', 'evSize') : '')
       });
-      return cfgCard + svcCard + statCard + evPlaceFilterBar() + listCard;
+      return cfgSvcCard + statCard + evPlaceFilterBar() + listCard;
     },
 
     /* ============ 油车管理 ============ */
@@ -273,7 +271,7 @@
       var f = fuel();
       var svc = serviceStatus(f, currentOdo('fuel'));
       var svcCard = UI.card({
-        title: '🔧 保养提醒', sub: svc.warn ? '<span class="badge danger">需关注</span>' : '',
+        title: '🔧 保养提醒' + (svc.warn ? ' <span class="badge danger">需关注</span>' : ''),
         right: '<button class="btn sm tap" data-act="fsvc">设置</button>',
         body: '<div class="small muted" style="line-height:1.9">' + esc(svc.text) + '</div>'
       });
@@ -318,29 +316,23 @@
       /* ---- 电车 ---- */
       evcfg: function () {
         UI.form({
-          title: '电车配置',
-          values: { battery: num(ev().battery) || 45, price: num(ev().price) || 0.3353 },
+          title: '电车配置与保养',
+          values: {
+            battery: num(ev().battery) || 45,
+            price: num(ev().price) || 0.3353,
+            serviceMile: num(ev().serviceMile) || '',
+            serviceDate: ev().serviceDate || ''
+          },
           fields: [
             { k: 'battery', label: '电池容量（度）', type: 'number', step: 0.1, min: 0.1, req: true, hint: '实际充入电量 = (充电后% − 充电前%) ÷ 100 × 容量' },
-            { k: 'price', label: '电价（元/度）', type: 'number', step: 0.0001, min: 0, req: true, hint: '默认 0.3353' }
-          ]
-        }).then(function (v) {
-          if (!v) return;
-          ev().battery = num(v.battery) || 45;
-          ev().price = num(v.price) || 0.3353;
-          Store.save(); App.refresh();
-        });
-      },
-      esvc: function () {
-        UI.form({
-          title: '电车保养提醒',
-          values: { serviceMile: num(ev().serviceMile), serviceDate: ev().serviceDate || '' },
-          fields: [
+            { k: 'price', label: '电价（元/度）', type: 'number', step: 0.0001, min: 0, req: true, hint: '默认 0.3353' },
             { k: 'serviceMile', label: '保养里程（km）', type: 'number', step: 1, min: 0, hint: '到该里程提醒保养，0 表示不按里程' },
             { k: 'serviceDate', label: '保养日期', type: 'date', hint: '到该日期前 30 天提醒' }
           ]
         }).then(function (v) {
           if (!v) return;
+          ev().battery = num(v.battery) || 45;
+          ev().price = num(v.price) || 0.3353;
           ev().serviceMile = num(v.serviceMile);
           ev().serviceDate = v.serviceDate || '';
           Store.save(); App.refresh();
