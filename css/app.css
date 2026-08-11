@@ -383,6 +383,27 @@ a{ color:var(--olive-deep); text-decoration:none; }
 .input::placeholder,.textarea::placeholder{ color:var(--brown-4); }
 .form-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
 .form-grid .full{ grid-column:1/-1; }
+.req-star{ color:var(--danger); font-weight:600; margin-left:1px; }
+
+/* 即时校验 */
+.field.err > label{ color:var(--danger); }
+.field.err .input, .field.err .select, .field.err .textarea{ border-color:var(--danger); box-shadow:0 0 0 3px rgba(180,85,63,.12); }
+.field-err{ display:none; font-size:12.5px; color:var(--danger); line-height:1.5; margin-top:1px; }
+.field.err .field-err{ display:block; animation:fadeIn .2s var(--ease); }
+
+/* 金额实时预览 */
+.money-input{ font-variant-numeric:tabular-nums; }
+.money-prev{ font-size:13px; color:var(--brown-2); padding:3px 2px 0; }
+.money-prev b{ color:var(--brown); font-weight:650; font-variant-numeric:tabular-nums; }
+
+/* 日期快捷胶囊 */
+.date-quick{ margin-top:7px; }
+.date-quick .chip{ background:var(--olive-8); border-color:transparent; color:var(--brown-2); font-size:12.5px; padding:6px 11px; border-radius:9px; }
+.date-quick .chip:hover{ background:var(--olive-16); color:var(--brown); }
+
+/* 表单底部实时摘要（如合计） */
+.form-live{ position:sticky; bottom:0; left:0; right:0; background:var(--card); padding:10px 2px 2px; border-top:1px dashed var(--line-2); margin-top:2px; font-size:13.5px; color:var(--brown); }
+.form-live b{ color:var(--olive-deep); font-variant-numeric:tabular-nums; }
 
 /* 快速添加行 */
 .quick-add{ display:flex; gap:10px; align-items:stretch; }
@@ -627,7 +648,7 @@ table.tbl td.ops{ white-space:nowrap; text-align:right; }
 .modal-foot{
   padding:18px 22px calc(20px + env(safe-area-inset-bottom));
   display:flex; gap:12px; position:sticky; bottom:0; background:var(--card);
-  flex:0 0 auto;
+  border-top:1px solid var(--line); flex:0 0 auto;
 }
 .modal-foot .btn{ flex:1; }
 .x-btn{

@@ -421,7 +421,7 @@
             { k: 'date', label: '加油日期', type: 'date', req: true },
             { k: 'liters', label: '加油量（升）', type: 'number', step: 0.01, min: 0 },
             { k: 'price', label: '油价（元/升）', type: 'number', step: 0.01, min: 0 },
-            { k: 'cost', label: '花费（元）', type: 'number', step: 0.01, min: 0 },
+            { k: 'cost', label: '花费（元）', type: 'number', step: 0.01, min: 0, money: true },
             { k: 'odo', label: '加油时总里程（km）', type: 'number', step: 1, min: 0, hint: '用于自动计算两次加油间里程差与每公里花费' }
           ]
         }).then(function (v) {
@@ -443,7 +443,7 @@
             { k: 'date', label: '加油日期', type: 'date', req: true },
             { k: 'liters', label: '加油量（升）', type: 'number', step: 0.01, min: 0 },
             { k: 'price', label: '油价（元/升）', type: 'number', step: 0.01, min: 0 },
-            { k: 'cost', label: '花费（元）', type: 'number', step: 0.01, min: 0 },
+            { k: 'cost', label: '花费（元）', type: 'number', step: 0.01, min: 0, money: true },
             { k: 'odo', label: '加油时总里程（km）', type: 'number', step: 1, min: 0 }
           ]
         }).then(function (v) {

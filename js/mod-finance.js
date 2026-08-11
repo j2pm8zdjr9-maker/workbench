@@ -313,7 +313,7 @@
           title: '新建账户', fields: [
             { k: 'name', label: '账户名称', req: true, full: true, ph: '如：招行储蓄卡 / 微信零钱' },
             { k: 'type', label: '账户类型', type: 'select', options: ACC_TYPE, def: '储蓄卡' },
-            { k: 'balance', label: '当前余额', type: 'number', def: 0, hint: '信用卡欠钱可填负数，如 -2000' },
+            { k: 'balance', label: '当前余额', type: 'number', def: 0, money: true, hint: '信用卡欠钱可填负数，如 -2000' },
             { k: 'note', label: '备注', full: true }
           ]
         }).then(function (v) {
@@ -332,7 +332,7 @@
           fields: [
             { k: 'name', label: '账户名称', req: true, full: true },
             { k: 'type', label: '账户类型', type: 'select', options: ACC_TYPE },
-            { k: 'balance', label: '当前余额', type: 'number', hint: '直接调整余额，不影响已有记账；信用卡欠钱填负数' },
+            { k: 'balance', label: '当前余额', type: 'number', money: true, hint: '直接调整余额，不影响已有记账；信用卡欠钱填负数' },
             { k: 'note', label: '备注', full: true }
           ]
         }).then(function (v) {
@@ -357,7 +357,7 @@
           title: '账户转账', values: { date: U.today() }, fields: [
             { k: 'acc', label: '转出账户', type: 'select', options: opts, req: true },
             { k: 'acc2', label: '转入账户', type: 'select', options: opts, req: true },
-            { k: 'amount', label: '金额', type: 'number', min: 0, req: true },
+            { k: 'amount', label: '金额', type: 'number', min: 0, req: true, money: true },
             { k: 'date', label: '日期', type: 'date', req: true, def: U.today() },
             { k: 'note', label: '备注', full: true }
           ]
@@ -433,7 +433,7 @@
         UI.form({
           title: '存入 ·' + g.name, desc: '已存 ' + money(saved) + ' / 目标 ' + money(g.target) + '（' + U.moneyFull(saved) + ' / ' + U.moneyFull(g.target) + '）',
           values: { date: U.today() }, fields: [
-            { k: 'amount', label: '存入金额', type: 'number', min: 0, req: true },
+            { k: 'amount', label: '存入金额', type: 'number', min: 0, req: true, money: true },
             { k: 'date', label: '日期', type: 'date', req: true, def: U.today() },
             { k: 'acc', label: '关联账户', type: 'select', ph: '不关联', options: F().accounts.map(function (a) { return { v: a.id, t: a.name }; }) },
             { k: 'note', label: '备注', full: true }
@@ -754,7 +754,7 @@
     var cats = (type === 'in' ? F().catIncome : F().catExpense);
     return [
       { k: 'type', label: '类型', type: 'select', options: [{ v: 'out', t: '支出' }, { v: 'in', t: '收入' }], def: type || 'out', hint: '改类型后请重新选择分类' },
-      { k: 'amount', label: '金额', type: 'number', min: 0, req: true },
+      { k: 'amount', label: '金额', type: 'number', min: 0, req: true, money: true },
       { k: 'acc', label: '账户', type: 'select', req: true, options: F().accounts.map(function (a) { return { v: a.id, t: a.name }; }) },
       { k: 'date', label: '日期', type: 'date', req: true, def: U.today() },
       { k: 'cat', label: '分类', type: 'select', ph: '请选择', options: F().catExpense.concat(F().catIncome).filter(function (v, i, s) { return s.indexOf(v) === i; }) },
@@ -765,7 +765,7 @@
   function goalFields() {
     return [
       { k: 'name', label: '目标名称', req: true, full: true, ph: '如：旅行基金' },
-      { k: 'target', label: '目标金额', type: 'number', min: 0, req: true },
+      { k: 'target', label: '目标金额', type: 'number', min: 0, req: true, money: true },
       { k: 'due', label: '计划完成日期', type: 'date' },
       { k: 'note', label: '备注', full: true }
     ];

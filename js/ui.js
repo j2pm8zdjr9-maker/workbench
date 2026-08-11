@@ -228,12 +228,22 @@
       return '<td data-label="' + esc(label) + '"' + (cls ? ' class="' + cls + '"' : '') + '>' + (val === '' || val === undefined || val === null ? '<span class="muted">—</span>' : val) + '</td>';
     },
 
-    /* ---------- 表单弹窗 ---------- */
+    /* ---------- 表单弹窗（增强：金额实时预览 / 日期快捷 / 即时校验 / 常驻保存） ---------- */
     form: function (cfg) {
       return new Promise(function (resolve) {
         var root = document.getElementById('modalRoot');
         var fields = cfg.fields || [];
         var vals = cfg.values || {};
+
+        function iso(d) { var y = d.getFullYear(), m = ('0' + (d.getMonth() + 1)).slice(-2), day = ('0' + d.getDate()).slice(-2); return y + '-' + m + '-' + day; }
+        function dateQuickItems() {
+          var now = new Date(), y = new Date(now); y.setDate(now.getDate() - 1);
+          var mo = new Date(now), dow = (now.getDay() + 6) % 7; mo.setDate(now.getDate() - dow);
+          var ms = new Date(now.getFullYear(), now.getMonth(), 1);
+          var lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          return [['今天', iso(now)], ['昨天', iso(y)], ['本周一', iso(mo)], ['本月1号', iso(ms)], ['上月1号', iso(lm)]];
+        }
+
         var body = '<div class="form-grid">' + fields.map(function (f) {
           var v = vals[f.k] !== undefined && vals[f.k] !== null ? vals[f.k] : (f.def !== undefined ? f.def : '');
           var cls = 'field' + (f.type === 'textarea' || f.full ? ' full' : '');
@@ -254,10 +264,12 @@
             inner = '<label class="opt-row tap" style="min-height:50px"><input type="checkbox" name="' + f.k + '" ' + (v ? 'checked' : '') + ' style="width:20px;height:20px;accent-color:#8AA832">' +
               '<span>' + esc(f.cbText || f.label) + '</span></label>';
           } else {
+            var isMoney = f.money || f.type === 'money';
             var extra = '';
-            if (f.type === 'number') extra = ' step="' + (f.step || 'any') + '"' + (f.min !== undefined ? ' min="' + f.min + '"' : '') + (f.max !== undefined ? ' max="' + f.max + '"' : '') + ' inputmode="decimal"';
+            if (f.type === 'number' || isMoney) extra = ' step="' + (f.step || 'any') + '"' + (f.min !== undefined ? ' min="' + f.min + '"' : '') + (f.max !== undefined ? ' max="' + f.max + '"' : '') + ' inputmode="decimal"';
+            else if (f.type === 'date' || f.type === 'time') extra = ' inputmode="numeric"';
             var listAttr = f.list ? ' list="' + f.k + '-list"' : '';
-            inner = '<input class="input" type="' + (f.type || 'text') + '" name="' + f.k + '" value="' + esc(v) + '" placeholder="' + esc(f.ph || '') + '"' + extra + listAttr + '>';
+            inner = '<input class="input' + (isMoney ? ' money-input' : '') + '" type="' + (f.type || 'text') + '" name="' + f.k + '" value="' + esc(v) + '" placeholder="' + esc(f.ph || '') + '"' + extra + listAttr + '>';
             if (f.list) {
               inner += '<datalist id="' + f.k + '-list">' + f.list.map(function (o) {
                 return '<option value="' + esc(o) + '"></option>';
@@ -268,24 +280,78 @@
                 return '<button type="button" class="chip tap" data-quick="' + esc(String(f.k)) + '::' + esc(String(q)) + '">' + esc(String(q)) + (f.quickUnit ? esc(String(f.quickUnit)) : '') + '</button>';
               }).join('') + '</div>';
             }
+            if (isMoney) {
+              var mp = (v === '' || v === null || v === undefined) ? '—' : U.money(num(v));
+              inner += '<div class="money-prev" data-money-prev="' + f.k + '">≈ <b>' + esc(mp) + '</b></div>';
+            }
+            if (f.type === 'date' && !f.noDateQuick) {
+              inner += '<div class="date-quick chip-row">' + dateQuickItems().map(function (q) {
+                return '<button type="button" class="chip ghost tap" data-dq="' + esc(f.k) + '::' + q[1] + '">' + esc(q[0]) + '</button>';
+              }).join('') + '</div>';
+            }
           }
-          return '<div class="' + cls + '"' + whenAttr + '>' + (f.type === 'checkbox' ? '' : '<label>' + esc(f.label) + (f.req ? ' <span style="color:#B4553F">*</span>' : '') + '</label>') + inner +
-            (f.hint ? '<span class="small muted">' + esc(f.hint) + '</span>' : '') + '</div>';
+          return '<div class="' + cls + '"' + whenAttr + '>' + (f.type === 'checkbox' ? '' : '<label>' + esc(f.label) + (f.req ? ' <span class="req-star">*</span>' : '') + '</label>') + inner +
+            (f.hint ? '<span class="small muted">' + esc(f.hint) + '</span>' : '') +
+            '<span class="field-err"></span></div>';
         }).join('') + '</div>';
+
+        var liveHtml = cfg.live ? '<div class="form-live" id="formLive"></div>' : '';
 
         var el = document.createElement('div');
         el.className = 'modal-mask';
-        el.innerHTML = '<div class="modal" role="dialog"><div class="modal-head"><h3>' + esc(cfg.title || '编辑') + '</h3>' +
-          '<button class="x-btn tap" data-x>✕</button></div>' +
-          '<div class="modal-body">' + (cfg.desc ? '<p class="small muted">' + esc(cfg.desc) + '</p>' : '') + body + '</div>' +
+        el.innerHTML = '<div class="modal" role="dialog" aria-modal="true" aria-label="' + esc(cfg.title || '编辑') + '"><div class="modal-head"><h3>' + esc(cfg.title || '编辑') + '</h3>' +
+          '<button class="x-btn tap" data-x aria-label="关闭">✕</button></div>' +
+          '<div class="modal-body">' + (cfg.desc ? '<p class="small muted">' + esc(cfg.desc) + '</p>' : '') + body + liveHtml + '</div>' +
           '<div class="modal-foot"><button class="btn ghost tap" data-x>取消</button><button class="btn primary tap" data-ok>' + esc(cfg.okText || '保存') + '</button></div></div>';
         root.appendChild(el);
 
-        var first = el.querySelector('.input,.textarea,.select');
-        if (first && window.matchMedia('(min-width:901px)').matches) setTimeout(function () { first.focus(); }, 90);
-
         function close(r) { el.remove(); UI.unlock(); resolve(r); }
         UI.lock();
+
+        function fieldVal(f) {
+          var node = el.querySelector('[name="' + f.k + '"]');
+          if (!node) return '';
+          return f.type === 'checkbox' ? node.checked : (node.value == null ? '' : String(node.value).trim());
+        }
+        function isVisible(f) {
+          if (!f.when) return true;
+          var ctrl = el.querySelector('[name="' + f.when.key + '"]');
+          return !!(ctrl && ctrl.value === String(f.when.val));
+        }
+        function allVals() { var o = {}; fields.forEach(function (f) { if (isVisible(f)) o[f.k] = fieldVal(f); }); return o; }
+        function ruleMsg(f, val, all) {
+          if (f.validate) return f.validate(val, all) || '';
+          var r = f.rule || (f.req ? 'required' : '');
+          if (!r) return '';
+          if (r === 'required') { if (val === '' || val === null) return (f.label || '该项') + '不能为空'; return ''; }
+          if (r === 'email') { if (val !== '' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val)) return '邮箱格式不正确'; return ''; }
+          if (r === 'number' || r === 'int' || r === 'positive' || r === 'money') {
+            if (val === '') return '';
+            var n = num(val); if (isNaN(n)) return '请输入数字';
+            if (r === 'int' && !Number.isInteger(n)) return '请输入整数';
+            if (r === 'positive' && n <= 0) return '需大于 0';
+            return '';
+          }
+          var mm = /^(min|max):(-?[\d.]+)$/.exec(r);
+          if (mm) { var b = +mm[2]; if (mm[1] === 'min' && num(val) < b) return '不能小于 ' + b; if (mm[1] === 'max' && num(val) > b) return '不能大于 ' + b; return ''; }
+          if (r.indexOf('len:') === 0) { var p = r.slice(4).split(','); if (val.length < +p[0]) return '至少 ' + p[0] + ' 个字'; if (val.length > +p[1]) return '最多 ' + p[1] + ' 个字'; return ''; }
+          return '';
+        }
+        function validateField(f) {
+          var div = el.querySelector('[data-field="' + f.k + '"]'); if (!div) return '';
+          if (!isVisible(f)) { div.classList.remove('err'); return ''; }
+          var msg = ruleMsg(f, fieldVal(f), allVals());
+          var errEl = div.querySelector('.field-err');
+          if (msg) { div.classList.add('err'); if (errEl) errEl.textContent = msg; }
+          else { div.classList.remove('err'); if (errEl) errEl.textContent = ''; }
+          return msg;
+        }
+        function refreshMoney(name) {
+          if (!name) { fields.forEach(function (f) { if (f.money || f.type === 'money') refreshMoney(f.k); }); return; }
+          var inp = el.querySelector('[name="' + name + '"]'), prev = el.querySelector('[data-money-prev="' + name + '"]');
+          if (inp && prev) { var v = inp.value.trim(); prev.innerHTML = '≈ <b>' + (v === '' ? '—' : esc(U.money(num(v)))) + '</b>'; }
+        }
+        function refreshLive() { if (!cfg.live) return; var node = el.querySelector('#formLive'); if (node) node.innerHTML = cfg.live(allVals()) || ''; }
 
         // 条件字段显隐：依赖 when.key 的值等于 when.val 时显示
         function applyWhen() {
@@ -300,29 +366,53 @@
         el.addEventListener('change', applyWhen);
         if (cfg.onMount) cfg.onMount(el, fields);
 
+        el.addEventListener('input', function (e) {
+          var inp = e.target.closest('input[name],textarea[name]');
+          if (inp) {
+            var f = null; for (var i = 0; i < fields.length; i++) { if (fields[i].k === inp.getAttribute('name')) { f = fields[i]; break; } }
+            if (f) { if (f.money || f.type === 'money') refreshMoney(f.k); validateField(f); }
+          }
+          refreshLive();
+        });
+        el.addEventListener('change', function (e) {
+          var nm = e.target.getAttribute && e.target.getAttribute('name');
+          if (nm) { for (var i = 0; i < fields.length; i++) { if (fields[i].k === nm) { validateField(fields[i]); break; } } }
+          refreshLive();
+        });
+
         el.addEventListener('click', function (e) {
           if (e.target === el || e.target.closest('[data-x]')) return close(null);
           var qb = e.target.closest('[data-quick]');
           if (qb) {
             var p = qb.dataset.quick.split('::');
             var inp = el.querySelector('[name="' + p[0] + '"]');
-            if (inp) { inp.value = p[1]; inp.dispatchEvent(new Event('input')); }
+            if (inp) { inp.value = p[1]; inp.dispatchEvent(new Event('input')); if (inp.tagName === 'INPUT') inp.focus(); }
+            return;
+          }
+          var dq = e.target.closest('[data-dq]');
+          if (dq) {
+            var d = dq.dataset.dq.split('::');
+            var di = el.querySelector('[name="' + d[0] + '"]');
+            if (di) { di.value = d[1]; di.dispatchEvent(new Event('input')); di.dispatchEvent(new Event('change')); }
             return;
           }
           if (e.target.closest('[data-ok]')) {
-            var out = {}, bad = null;
+            var out = {}, bad = null, firstErr = null;
             fields.forEach(function (f) {
-              if (f.when) {
-                var ctrl = el.querySelector('[name="' + f.when.key + '"]');
-                if (!ctrl || ctrl.value !== String(f.when.val)) { out[f.k] = ''; return; } // 隐藏字段跳过
-              }
+              if (!isVisible(f)) { out[f.k] = f.type === 'checkbox' ? false : ''; return; }
               var node = el.querySelector('[name="' + f.k + '"]');
               if (!node) return;
               var v = f.type === 'checkbox' ? node.checked : node.value.trim();
-              if (f.req && (v === '' || v === undefined)) bad = bad || f.label;
-              out[f.k] = f.type === 'number' ? (v === '' ? '' : num(v)) : v;
+              out[f.k] = (f.type === 'number' || f.money || f.type === 'money') ? (v === '' ? '' : num(v)) : v;
+              var msg = ruleMsg(f, v, out);
+              if (msg) {
+                var div = el.querySelector('[data-field="' + f.k + '"]');
+                if (div) { div.classList.add('err'); var ee = div.querySelector('.field-err'); if (ee) ee.textContent = msg; }
+                if (!firstErr) firstErr = div;
+                bad = bad || f.label;
+              }
             });
-            if (bad) { U.toast('请填写「' + bad + '」'); return; }
+            if (bad) { if (firstErr) { var fe = firstErr.querySelector('.input,.textarea,.select'); if (fe) fe.focus(); } U.toast('请检查「' + bad + '」'); return; }
             close(out);
           }
         });
@@ -334,8 +424,13 @@
         });
         el.addEventListener('keydown', function (e) {
           if (e.key === 'Escape') close(null);
-          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) el.querySelector('[data-ok]').click();
+          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { var ok = el.querySelector('[data-ok]'); if (ok) ok.click(); }
         });
+
+        // 初次渲染：金额预览 + 实时摘要 + 自动聚焦首个输入
+        refreshMoney(); refreshLive();
+        var first = el.querySelector('.input:not([type=hidden]),.textarea,.select');
+        if (first && window.matchMedia('(min-width:901px)').matches) setTimeout(function () { try { first.focus(); } catch (e) {} }, 90);
       });
     },
 
