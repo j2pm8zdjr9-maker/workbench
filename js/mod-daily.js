@@ -238,7 +238,7 @@
         UI.del(h.name, function () {
           CI().habits = CI().habits.filter(function (x) { return x.id !== h.id; });
           Object.keys(CI().log || {}).forEach(function (d) { if (CI().log[d] && CI().log[d][h.id]) delete CI().log[d][h.id]; });
-          Store.save(); chPg = 1; drawList(); U.toast('已删除');
+          Store.save(); chPg = 1; drawList(); App.refresh(); U.toast('已删除');
         });
         return;
       }
@@ -373,7 +373,6 @@
       var total = habits.length;
       var isToday = cur.day === U.today();
       var done = habits.filter(function (h) { return isDone(cur.day, h.id); }).length;
-      var pct = total ? done / total * 100 : 0;
 
       function renderHabit(h) {
         var on = isDone(cur.day, h.id), at = doneAt(cur.day, h.id), sb = slotBadge(h);
@@ -402,7 +401,7 @@
         '<div class="small muted">' + (isToday ? '今天' : U.relDay(cur.day)) + '</div></div>' +
         '<button class="btn sm ghost tap" data-act="next"' + (isToday ? ' disabled' : '') + '>后一天 ›</button></div>' +
         (isToday ? '' : '<div class="row" style="margin-bottom:12px"><button class="link-btn tap" data-act="today">↩ 回到今天</button></div>') +
-        (total ? '<div class="row between small muted" style="margin-bottom:8px"><span>完成 ' + done + '/' + total + '</span><span>' + Math.round(pct) + '%</span></div>' + UI.bar(pct) : '') +
+        (total ? '<div class="row between small muted" style="margin-bottom:8px"><span>今日完成 ' + done + '/' + total + '</span></div>' : '') +
         (habits.length ?
           '<div class="list" style="margin-top:14px">' + ListPager.slice('checkin:list', habits).map(renderHabit).join('') + '</div>' + ListPager.pager('checkin:list', habits.length) :
           (all.length ? UI.empty('「' + U.fmtDate(cur.day, true) + '」没有进行中的打卡任务', '🌿')
@@ -554,10 +553,9 @@
     var caret = '<span style="flex-shrink:0;color:#bbb;font-size:12px;margin-left:6px">' + (expanded ? '▾' : '▸') + '</span>';
     var titleRow = '<div class="row between" style="align-items:center"><div class="item-title" style="min-width:0">' + esc(x.title) + '</div>' + caret + '</div>';
     if (!expanded) {
-      var quickArch = (!isDone && x.status !== 'archive') ? ' <button class="link-btn tap" data-act="arch" data-id="' + x.id + '">标未完成</button>' : '';
       return '<div class="item' + (isDone ? ' done' : '') + '" data-act="texpand" data-id="' + x.id + '">' +
         UI.check(isDone, 'done', x.id) +
-        '<div class="item-main">' + titleRow + meta + quickArch + '</div></div>';
+        '<div class="item-main">' + titleRow + meta + '</div></div>';
     }
     var subHtml = subs.length ? '<div class="subs">' + subs.map(function (s) {
       return '<div class="sub' + (s.done ? ' done' : '') + '">' + UI.check(s.done, 'sub', x.id + '|' + s.id, true) +
@@ -796,7 +794,7 @@
       ttoday: function () { tCur.day = U.today(); ListPager.resetPg('tasks:list'); App.refresh(); },
       tcalPrev: function () { navT(-1); },
       tcalNext: function () { navT(1); },
-      tcalToday: function () { tcal.y = new Date().getFullYear(); tcal.m = new Date().getMonth() + 1; App.refresh(); },
+      tcalToday: function () { tcal.y = new Date().getFullYear(); tcal.m = new Date().getMonth() + 1; tCur.day = U.today(); App.refresh(); },
       tday: function (t) { tCur.day = t.dataset.d; ListPager.resetPg('tasks:list'); App.refresh(); },
       new: function () {
         UI.form({ title: '新建任务', fields: taskFields() }).then(function (v) {

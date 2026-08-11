@@ -616,9 +616,10 @@ table.tbl td.ops{ white-space:nowrap; text-align:right; }
   .quick-add{ flex-wrap:wrap; }
   .quick-add .input{ flex:1 1 100%; }
   .quick-add .btn{ flex:1; }
-  .stat-grid{ grid-template-columns:repeat(2,1fr); gap:10px; }
-  .stat{ padding:13px; }
-  .stat .v{ font-size:18px; }
+  .stat-grid{ grid-template-columns:repeat(4,1fr); gap:8px; }
+  .stat{ padding:9px 6px; border-radius:11px; }
+  .stat .k{ font-size:10.5px; }
+  .stat .v{ font-size:15px; letter-spacing:0; }
   .big-num{ font-size:22px; }
 
   /* 表格转卡片 */
@@ -645,7 +646,10 @@ table.tbl td.ops{ white-space:nowrap; text-align:right; }
 }
 
 @media (max-width: 380px){
-  .stat-grid{ grid-template-columns:1fr; }
+  .stat-grid{ grid-template-columns:repeat(4,1fr); gap:6px; }
+  .stat{ padding:8px 3px; }
+  .stat .k{ font-size:9.5px; }
+  .stat .v{ font-size:13.5px; }
   .view{ padding-left:13px; padding-right:13px; }
 }
 
