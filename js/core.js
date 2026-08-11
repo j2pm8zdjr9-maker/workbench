@@ -238,7 +238,14 @@
     var n = num(v);
     var sign = n < 0 ? '-' : '';
     var abs = Math.abs(n);
-    if (abs >= 1e8) return sign + '¥' + (abs / 1e8).toFixed(2) + '亿';
+    if (abs >= 1e8) {
+      var yi = abs / 1e8;
+      if (abs >= 1e10) return sign + '¥' + yi.toFixed(0) + '亿';
+      if (abs >= 1e9) return sign + '¥' + yi.toFixed(1) + '亿';
+      return sign + '¥' + yi.toFixed(2) + '亿';
+    }
+    if (abs >= 1e6) return sign + '¥' + (abs / 1e4).toFixed(0) + '万';
+    if (abs >= 1e5) return sign + '¥' + (abs / 1e4).toFixed(1) + '万';
     if (abs >= 1e4) return sign + '¥' + (abs / 1e4).toFixed(2) + '万';
     return sign + '¥' + abs.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
