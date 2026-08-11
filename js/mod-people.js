@@ -761,12 +761,12 @@
           body:
             '<div class="row" style="gap:12px;align-items:center">' +
             '<span class="small muted">小</span>' +
-            '<input type="range" class="font-range" min="85" max="150" step="5" value="' + fsPct + '" data-chg="fontScale" style="flex:1">' +
+            '<input type="range" class="font-range" min="85" max="175" step="5" value="' + fsPct + '" data-chg="fontScale" style="flex:1">' +
             '<span class="small muted">大</span>' +
             '<span class="badge" id="fsLabel">' + fsPct + '%</span>' +
             '</div>' +
             '<div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap">' +
-            [85, 100, 115, 130, 150].map(function (v) {
+            [85, 100, 115, 130, 150, 175].map(function (v) {
               return '<button class="chip tap' + (v === fsPct ? ' on' : '') + '" data-act="fsPreset" data-k="' + v + '">' + v + '%</button>';
             }).join('') +
             '</div>'

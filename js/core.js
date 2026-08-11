@@ -34,7 +34,7 @@
       annivTypes: ['生日', '纪念日', '节日', '重要节点'],
       socialCats: ['亲戚', '朋友', '同事', '同学', '合作伙伴', '其他'],
       cat: { pets: [], deworm: [], vaccine: [], food: [], litter: [] },
-      settings: { privacy: false, nick: '', created: '', fontScale: 1 },
+      settings: { privacy: false, nick: '', created: '', fontScale: 1.15 },
       ui: { last: 'checkin', tabs: {}, timefilter: {}, catPin: 3 }
     };
   }
@@ -109,6 +109,14 @@
         this.ok = false; this.data = defaults();
         console.warn('本地存储读取失败', e);
       }
+      // 字体基线升级：历史默认 1.0 → 1.15（仅一次性，不覆盖用户后续手动调整）
+      try {
+        if (!this.data.settings._fsMigrated) {
+          this.data.settings.fontScale = 1.15;
+          this.data.settings._fsMigrated = true;
+          localStorage.setItem(KEY, JSON.stringify(this.data));
+        }
+      } catch (e) {}
       // 兜底：若「加载时」本机 localStorage 为空（或被 webview 清空），尝试用 IndexedDB 镜像恢复
       try {
         Store._restoring = true;

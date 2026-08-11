@@ -24,7 +24,7 @@
     Store.load();
 
     // 应用全局字体大小设置
-    if (window.UI && UI.applyFont) UI.applyFont(Store.data.settings.fontScale || 1);
+    if (window.UI && UI.applyFont) UI.applyFont(Store.data.settings.fontScale || 1.15);
 
     // 清理已移除的 AI 助手遗留的本地数据
     try { localStorage.removeItem('workbench.ai.chat'); } catch (e) {}

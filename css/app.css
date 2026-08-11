@@ -7,8 +7,8 @@
 html{ -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
 :root{
-  /* 全局字体缩放系数（设置页调节，html 的 zoom 会整体缩放，含弹窗） */
-  --font-scale: 1;
+  /* 全局字体缩放系数（设置页调节，html 的 zoom 会整体缩放，含弹窗）。基线默认为 115% 更易读 */
+  --font-scale: 1.15;
   /* 缩放后的真实可视视口高度：100vh 按放大前的视口解析，缩放会让可视区缩小为 100vh / fontScale，
      侧边栏/布局高度必须用此值，否则放大后底部被推出可视区（如导航栏滚不到底） */
   --app-vh: calc(100vh / var(--font-scale, 1));
