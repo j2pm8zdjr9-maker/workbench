@@ -331,6 +331,7 @@
       return UI.head('✅ 打卡', '坚持每天的小习惯，积少成多') +
         UI.stats([
           ['打卡任务', total],
+          ['今日完成', tDone + '/' + total, total > 0 && tDone === total],
           ['连续打卡', streakDays() + ' 天'],
           ['累计打卡', totalChecks()]
         ]) + this.daily();
