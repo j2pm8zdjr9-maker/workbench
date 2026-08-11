@@ -140,6 +140,21 @@ a{ color:var(--olive-deep); text-decoration:none; }
   transition: background-color var(--t), color var(--t), border-color var(--t),
               box-shadow var(--t), transform .14s var(--ease), opacity var(--t);
 }
+/* 按压反馈：按下轻微缩小，像原生 App */
+.tap:active, .btn:active, .pill:active, .tab:active, .chip:active, .nav-item:active,
+.qbtn:active, .home-pill:active, .link-btn:active, .check:active, .icon-btn:active, .top-fab:active{
+  transform:scale(.96);
+}
+/* 进场与弹窗动效 */
+@keyframes fadeInUp{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;} }
+@keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+@keyframes popIn{ from{opacity:0; transform:translateY(12px) scale(.97);} to{opacity:1; transform:none;} }
+.view > *{ animation:fadeInUp .30s var(--ease) both; }
+.modal-mask .modal{ animation:popIn .28s var(--ease) both; }
+/* 尊重系统「减少动态效果」偏好 */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ animation-duration:.001ms!important; animation-iteration-count:1!important; transition-duration:.001ms!important; scroll-behavior:auto!important; }
+}
 /* 内容区与表单输入保持可选/可长按 */
 .input, .textarea, .select, .item-title, .item-note, .di-dbody, .diary-editor, .privacy, .empty{
   -webkit-user-select:auto;
