@@ -363,18 +363,15 @@
     ];
   }
 
-  /* 备考筛选：科目 / 内容分类 两个并列筛选条，各自独立选择 */
-  function examCatPills() {
+  /* 备考筛选：科目 / 内容分类，复用与任务待办一致的「灵活胶囊 + 更多 ▾」筛选条。
+     直接显示数由各自命名空间的 catPin 控制，可在「分类管理」里调整。 */
+  function examCatFilter() {
     var subj = Cats.get('examSubject'), con = Cats.get('examContent');
     if (!subj.length && !con.length) return '';
     var curS = App.tab('exam', 'subj', '');
     var curC = App.tab('exam', 'cont', '');
-    var sBar = UI.pills([{ k: '', t: '全部科目' }].concat(subj.map(function (s) { return { k: s, t: s }; })), curS, 'examSubj');
-    var cBar = UI.pills([{ k: '', t: '全部内容' }].concat(con.map(function (s) { return { k: s, t: s }; })), curC, 'examContent');
-    return '<div class="exam-filters" style="margin:0 0 14px">' +
-      (subj.length ? '<div class="ef-row"><span class="ef-label">科目</span>' + sBar + '</div>' : '') +
-      (con.length ? '<div class="ef-row" style="margin-top:8px"><span class="ef-label">内容</span>' + cBar + '</div>' : '') +
-      '</div>';
+    return (subj.length ? Cats.filterBar('examSubject', curS, { label: '科目' }) : '') +
+      (con.length ? (subj.length ? '<div style="height:10px"></div>' : '') + Cats.filterBar('examContent', curC, { label: '内容' }) : '');
   }
   function examFilterFn(x) {
     var subj = App.tab('exam', 'subj', '');
@@ -508,9 +505,9 @@
       return UI.head('📚 备考计划', '设定考试日期，自由安排计划、记录与笔记') +
         this.countdown() +
         UI.tabs([{ k: 'plan', t: '学习计划', i: '🗓' }, { k: 'record', t: '学习记录', i: '⏱' }, { k: 'note', t: '知识点笔记', i: '📒' }], t, 'tab') +
-        examCatPills() +
+        examCatFilter() +
         '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0 14px">' +
-        '<button class="btn ghost sm tap" data-act="examCatManage">🗂 分类管理</button>' +
+        Cats.btn('examSubject', '科目分类', '🗂 科目管理') + Cats.btn('examContent', '内容分类', '🗂 内容管理') +
         '</div>' +
         (t === 'plan' ? this.plans() : t === 'record' ? this.records() : this.notes()) +
         Cal.card({
@@ -611,63 +608,6 @@
 
     acts: {
       tab: function (t) { App.setTab('exam', 'main', t.dataset.k); App.refresh(); },
-      examSubj: function (t) {
-        App.setTab('exam', 'subj', t.dataset.k);
-        ListPager.resetPg('exam:plan'); ListPager.resetPg('exam:record'); ListPager.resetPg('exam:note'); App.refresh();
-      },
-      examContent: function (t) {
-        App.setTab('exam', 'cont', t.dataset.k);
-        ListPager.resetPg('exam:plan'); ListPager.resetPg('exam:record'); ListPager.resetPg('exam:note'); App.refresh();
-      },
-      examCatAdd: function () {
-        UI.form({
-          title: '新增备考分类',
-          fields: [
-            { k: 'type', label: '分类类型', type: 'select', options: [{ v: 'examSubject', t: '科目' }, { v: 'examContent', t: '内容分类' }], def: 'examSubject' },
-            { k: 'name', label: '分类名称', req: true, full: true, ph: '如：数学 / 高数' }
-          ]
-        }).then(function (v) {
-          if (!v) return;
-          if (Cats.add(v.type, v.name)) { Store.save(); App.refresh(); U.toast('已添加「' + v.name + '」'); }
-          else U.toast('已存在或为空');
-        });
-      },
-      /* 分类管理：科目 / 内容分类 两大分类，各自可新增、删除、排序 */
-      examCatManage: function () {
-        function section(ns, title) {
-          var list = Cats.get(ns);
-          var inp = '<div class="field full"><input class="input" id="new-' + ns + '" placeholder="输入' + title + '名称" maxlength="20"></div>' +
-            '<div class="field full"><button class="btn primary tap" data-act="ecAdd" data-ns="' + ns + '" style="width:100%">+ 添加' + title + '</button></div>';
-          var body = list.length ? list.map(function (c, i) {
-            return '<div class="item" style="padding:8px 10px"><div class="item-main"><div class="item-title">' + esc(c) + '</div></div>' +
-              '<div class="row" style="gap:6px">' +
-              (i > 0 ? '<button class="link-btn tap" data-act="ecUp" data-ns="' + ns + '" data-c="' + esc(c) + '">↑</button>' : '') +
-              (i < list.length - 1 ? '<button class="link-btn tap" data-act="ecDown" data-ns="' + ns + '" data-c="' + esc(c) + '">↓</button>' : '') +
-              '<button class="link-btn del tap" data-act="ecDel" data-ns="' + ns + '" data-c="' + esc(c) + '">删除</button></div></div>';
-          }).join('') : UI.empty('还没有' + title);
-          return '<div class="small muted" style="margin:4px 0 4px">📗 ' + title + '</div>' + inp +
-            '<div style="height:6px"></div>' + (list.length ? '<div class="list">' + body + '</div>' : '');
-        }
-        var render = function () {
-          return section('examSubject', '科目') + '<div style="height:16px"></div>' + section('examContent', '内容分类');
-        };
-        var el = UI.sheet('🗂 分类管理', render(), '<button class="btn ghost tap" data-x>关闭</button>');
-        var body = el.querySelector('.modal-body');
-        el.addEventListener('click', function (e) {
-          var b = e.target.closest('[data-act]'); if (!b) return;
-          var a = b.dataset.act, ns = b.dataset.ns;
-          if (a === 'ecAdd') {
-            var inp = el.querySelector('#new-' + ns);
-            if (Cats.add(ns, inp.value)) { inp.value = ''; body.innerHTML = render(); App.refresh(); } else U.toast('已存在或为空');
-          } else if (a === 'ecDel') { Cats.del(ns, b.dataset.c); body.innerHTML = render(); App.refresh(); }
-          else if (a === 'ecUp' || a === 'ecDown') {
-            var arr = D()[ns]; if (!arr) return;
-            var idx = arr.indexOf(b.dataset.c); if (idx < 0) return;
-            var j = a === 'ecUp' ? idx - 1 : idx + 1; if (j < 0 || j >= arr.length) return;
-            var tmp = arr[idx]; arr[idx] = arr[j]; arr[j] = tmp; Store.save(); body.innerHTML = render();
-          }
-        });
-      },
       eprev: function () { eCur.day = U.shiftDay(eCur.day, -1); ListPager.resetPg('exam:plan'); ListPager.resetPg('exam:record'); App.refresh(); },
       enext: function () { eCur.day = U.shiftDay(eCur.day, 1); ListPager.resetPg('exam:plan'); ListPager.resetPg('exam:record'); App.refresh(); },
       etoday: function () { eCur.day = U.today(); ListPager.resetPg('exam:plan'); ListPager.resetPg('exam:record'); App.refresh(); },
@@ -938,6 +878,18 @@
 
     mount: function () {}
   };
+  /* 备考科目 / 内容分类筛选：灵活胶囊回调（全部/固定/更多 复用全局 catPick 委托） */
+  Cats.setPicker('examSubject', function (k) {
+    App.setTab('exam', 'subj', k);
+    ListPager.resetPg('exam:plan'); ListPager.resetPg('exam:record'); ListPager.resetPg('exam:note');
+    App.refresh();
+  });
+  Cats.setPicker('examContent', function (k) {
+    App.setTab('exam', 'cont', k);
+    ListPager.resetPg('exam:plan'); ListPager.resetPg('exam:record'); ListPager.resetPg('exam:note');
+    App.refresh();
+  });
+
   App.register(exam);
 
 
