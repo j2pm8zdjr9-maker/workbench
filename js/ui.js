@@ -306,9 +306,10 @@
             inner = '<textarea class="textarea" name="' + f.k + '" placeholder="' + esc(f.ph || '') + '" rows="' + (f.rows || 4) + '">' + esc(v) + '</textarea>';
           } else if (f.type === 'select') {
             var catAttr = f.catns ? ' data-catns="' + f.catns + '" data-prev="' + esc(String(v)) + '"' : '';
+            var opts = typeof f.options === 'function' ? f.options({}) : (f.options || []);
             inner = '<select class="select" name="' + f.k + '"' + catAttr + '>' +
               (f.ph ? '<option value="">' + esc(f.ph) + '</option>' : '') +
-              (f.options || []).map(function (o) {
+              opts.map(function (o) {
                 var val = typeof o === 'object' ? o.v : o, txt = typeof o === 'object' ? o.t : o;
                 return '<option value="' + esc(val) + '"' + (String(val) === String(v) ? ' selected' : '') + '>' + esc(txt) + '</option>';
               }).join('') +
@@ -416,8 +417,33 @@
             if (div) div.style.display = (ctrl && ctrl.value === String(f.when.val)) ? '' : 'none';
           });
         }
+        // 依赖联动：当字段 A 变化时，重新渲染依赖 A 的 select 选项
+        function applyDepends(changed) {
+          var current = allVals();
+          fields.forEach(function (f) {
+            if (f.type !== 'select' || !f.depends || !f.options || f.depends.indexOf(changed) < 0) return;
+            var opts = typeof f.options === 'function' ? f.options(current) : (f.options || []);
+            var sel = el.querySelector('[name="' + f.k + '"]');
+            if (!sel) return;
+            var cur = sel.value;
+            var hasCustom = sel.querySelector('option[value="__custom"]') !== null;
+            var html = (f.ph ? '<option value="">' + esc(f.ph) + '</option>' : '') +
+              opts.map(function (o) {
+                var val = typeof o === 'object' ? o.v : o, txt = typeof o === 'object' ? o.t : o;
+                return '<option value="' + esc(val) + '"' + (String(val) === String(cur) ? ' selected' : '') + '>' + esc(txt) + '</option>';
+              }).join('') +
+              (hasCustom ? '<option value="__custom">＋ 自定义…</option>' : '');
+            sel.innerHTML = html;
+            var still = opts.some(function (o) { var val = typeof o === 'object' ? o.v : o; return String(val) === String(cur); });
+            if (cur && !still && cur !== '__custom') { sel.value = ''; sel.dispatchEvent(new Event('change')); }
+          });
+        }
         applyWhen();
-        el.addEventListener('change', applyWhen);
+        el.addEventListener('change', function (e) {
+          var nm = e.target.getAttribute && e.target.getAttribute('name');
+          applyWhen();
+          if (nm) applyDepends(nm);
+        });
         if (cfg.onMount) cfg.onMount(el, fields);
 
         el.addEventListener('input', function (e) {
@@ -552,7 +578,7 @@
         var max = 0;
         function measure() { max = acts.offsetWidth || 0; }
         measure();
-        var sx = 0, sy = 0, drag = false, decided = false, horiz = false, moved = false, opened = false, suppress = false;
+        var sx = 0, sy = 0, dx = 0, drag = false, decided = false, horiz = false, moved = false, opened = false, suppress = false;
         item.addEventListener('pointerdown', function (e) {
           if (e.target.closest('.sw-btn')) return;
           measure();
@@ -568,20 +594,19 @@
             if (!horiz) { drag = false; return; }
             item.classList.add('sw-drag');
           }
-          var dx = (opened ? mx - (-max) : mx);
-          dx = Math.max(-max, Math.min(0, dx));
+          var ddx = (opened ? mx - (-max) : mx);
+          dx = Math.max(-max, Math.min(0, ddx));
           inner.style.transition = 'none';
-          inner.style.transform = 'translateX(' + dx + 'px)';
+          inner.style.transform = 'translateX(0)';
+          inner.style.width = 'calc(100% - ' + Math.abs(dx) + 'px)';
           if (Math.abs(mx) > 4) moved = true;
         });
         function end() {
           if (!drag) return;
           drag = false; item.classList.remove('sw-drag');
           inner.style.transition = '';
-          var cur = 0, m = inner.style.transform.match(/-?\d+(\.\d+)?/);
-          if (m) cur = parseFloat(m[0]);
-          if (cur < -max / 2) { opened = true; inner.style.transform = 'translateX(' + (-max) + 'px)'; }
-          else { opened = false; inner.style.transform = 'translateX(0)'; }
+          if (Math.abs(dx) > max / 2) { opened = true; inner.style.transform = 'translateX(0)'; inner.style.width = 'calc(100% - ' + max + 'px)'; }
+          else { opened = false; inner.style.transform = 'translateX(0)'; inner.style.width = '100%'; }
           if (moved) { suppress = true; setTimeout(function () { suppress = false; }, 0); }
         }
         item.addEventListener('pointerup', end);
@@ -589,7 +614,7 @@
         item.addEventListener('click', function (e) {
           if (opened && !e.target.closest('.sw-btn')) {
             e.preventDefault(); e.stopPropagation();
-            opened = false; inner.style.transform = 'translateX(0)';
+            opened = false; inner.style.transform = 'translateX(0)'; inner.style.width = '100%';
             return;
           }
           if (suppress) {

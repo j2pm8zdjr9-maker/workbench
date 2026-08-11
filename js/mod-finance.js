@@ -751,13 +751,12 @@
   }
 
   function flowFields(type) {
-    var cats = (type === 'in' ? F().catIncome : F().catExpense);
     return [
-      { k: 'type', label: '类型', type: 'select', options: [{ v: 'out', t: '支出' }, { v: 'in', t: '收入' }], def: type || 'out', hint: '改类型后请重新选择分类' },
+      { k: 'type', label: '类型', type: 'select', options: [{ v: 'out', t: '支出' }, { v: 'in', t: '收入' }], def: type || 'out', hint: '选择类型后分类会自动切换' },
       { k: 'amount', label: '金额', type: 'number', min: 0, req: true, money: true },
       { k: 'acc', label: '账户', type: 'select', req: true, options: F().accounts.map(function (a) { return { v: a.id, t: a.name }; }) },
       { k: 'date', label: '日期', type: 'date', req: true, def: U.today() },
-      { k: 'cat', label: '分类', type: 'select', ph: '请选择', options: F().catExpense.concat(F().catIncome).filter(function (v, i, s) { return s.indexOf(v) === i; }) },
+      { k: 'cat', label: '分类', type: 'select', ph: '请选择', depends: ['type'], options: function (all) { return all.type === 'in' ? F().catIncome : F().catExpense; } },
       { k: 'newcat', label: '或新增分类', ph: '填了会自动加入分类库' },
       { k: 'note', label: '备注', type: 'textarea', rows: 3 }
     ];
