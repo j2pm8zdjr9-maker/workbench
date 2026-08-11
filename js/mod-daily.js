@@ -521,12 +521,9 @@
   var REPEAT = { none: '不重复', day: '每天', week: '每周', month: '每月' };
   function taskDate(x) { return x.due || x.doneAt || x.created || ''; }
 
-  /* 任务筛选态。语义：待办 = 还没开始办；未完成(archive) = 忘了办、时间已过无法补办。
-     旧版第一个「未完成(open)」与后面重复，已取消，老数据自动落到「全部」。 */
+  /* 任务筛选态：待办 / 进行中 / 已完成 / 全部。逾期任务仍按「待办」展示，并在统计中标红。 */
   function taskSt() {
-    var st = App.tab('tasks', 'st', 'all');
-    if (st === 'open') { App.setTab('tasks', 'st', 'all'); st = 'all'; }
-    return st;
+    return App.tab('tasks', 'st', 'all');
   }
 
   function renderTaskItem(x) {
@@ -543,7 +540,6 @@
     var meta = '<div class="item-meta">' +
       '<span class="badge ' + PRIO[x.prio || 'mid'].c + '">' + PRIO[x.prio || 'mid'].t + '优先</span>' +
       (x.status === 'doing' ? '<span class="badge info">进行中</span>' : '') +
-      (x.status === 'archive' ? '<span class="badge grey">未完成</span>' : '') +
       (x.tag ? '<span class="badge">#' + esc(x.tag) + '</span>' : '') +
       dueTag +
       (x.repeat && x.repeat !== 'none' ? '<span class="badge grey">🔁 ' + REPEAT[x.repeat] + '</span>' : '') +
@@ -568,9 +564,7 @@
       subHtml +
       '<div class="row" style="margin-top:8px;gap:4px">' +
       '<button class="link-btn tap" data-act="subadd" data-id="' + x.id + '">+ 子任务</button>' +
-      (x.status !== 'doing' && !isDone && x.status !== 'archive' ? '<button class="link-btn tap" data-act="doing" data-id="' + x.id + '">标为进行中</button>' : '') +
-      (x.status !== 'archive' ? '<button class="link-btn tap" data-act="arch" data-id="' + x.id + '">标为未完成</button>' : '') +
-      (x.status === 'archive' ? '<button class="link-btn tap" data-act="untodo" data-id="' + x.id + '">↩ 回到待办</button>' : '') +
+      (x.status !== 'doing' && !isDone ? '<button class="link-btn tap" data-act="doing" data-id="' + x.id + '">标为进行中</button>' : '') +
       '</div></div>' + UI.ops(x.id, 'edit', 'del') + '</div>';
   }
 
@@ -587,7 +581,7 @@
     return [
       { k: 'title', label: '任务名称', req: true, ph: '要做什么', full: true },
       { k: 'prio', label: '优先级', type: 'select', options: [{ v: 'high', t: '高' }, { v: 'mid', t: '中' }, { v: 'low', t: '低' }], def: 'mid' },
-      { k: 'status', label: '状态', type: 'select', options: [{ v: 'todo', t: '待办' }, { v: 'doing', t: '进行中' }, { v: 'done', t: '已完成' }, { v: 'archive', t: '未完成' }], def: 'todo' },
+      { k: 'status', label: '状态', type: 'select', options: [{ v: 'todo', t: '待办' }, { v: 'doing', t: '进行中' }, { v: 'done', t: '已完成' }], def: 'todo' },
       { k: 'due', label: '截止日期', type: 'date' },
       { k: 'repeat', label: '重复周期', type: 'select', options: Object.keys(REPEAT).map(function (k) { return { v: k, t: REPEAT[k] }; }), def: 'none' },
       Cats.field('taskTags', '分类标签', { k: 'tag' }),
@@ -608,13 +602,13 @@
       '<button class="btn sm ghost tap" data-act="tnext"' + (isToday ? ' disabled' : '') + '>后一天 ›</button></div>' +
       (isToday ? '' : '<div class="row" style="margin-bottom:12px"><button class="link-btn tap" data-act="ttoday">↩ 回到今天</button></div>');
   }
-  // 某一天相关的任务：未完成（todo/doing/未完成）自创建日起延续显示，直到点击完成；
+  // 某一天相关的任务：未完成的（todo/doing）自创建日起延续显示，直到点击完成；
   // 已完成任务仅在该完成日（doneAt=day）当天显示，此前显示为未完成、此后不再出现在当日
   function tasksForDay(day) {
     return (D().tasks || []).filter(function (x) {
       if ((x.created || '') > day) return false;
       if (x.status === 'done') return (x.doneAt || '') >= day; // 完成日当日及之后才算完成；之前按未完成显示
-      return true; // todo/doing/未完成 均为未完成态，当日有效
+      return true; // todo/doing 均为未完成态，当日有效
     });
   }
   function tasksDoneOn(date) {
@@ -645,16 +639,14 @@
       var st = taskSt();
       var tag = App.tab('tasks', 'tag', '');
       var all = D().tasks;
-      var overdue = all.filter(function (x) { return x.due && x.status !== 'done' && x.status !== 'archive' && U.dayDiff(U.today(), x.due) < 0; }).length;
-      var todayN = all.filter(function (x) { return x.due === U.today() && x.status !== 'done' && x.status !== 'archive'; }).length;
-      var archiveN = all.filter(function (x) { return x.status === 'archive'; }).length;
+      var overdue = all.filter(function (x) { return x.due && x.status !== 'done' && U.dayDiff(U.today(), x.due) < 0; }).length;
+      var todayN = all.filter(function (x) { return x.due === U.today() && x.status !== 'done'; }).length;
 
-      return UI.head('📌 任务待办', '待办 = 还没开始办；未完成 = 逾期且无法补办，单独归档管理') +
+      return UI.head('📌 任务待办', '待办 = 还没开始办；逾期的任务会在此处标红') +
         UI.stats([
           ['进行中', all.filter(function (x) { return x.status === 'doing'; }).length],
           ['今日到期', todayN, todayN > 0],
           ['已逾期', overdue],
-          ['未完成', archiveN, archiveN > 0],
           ['已完成', all.filter(function (x) { return x.status === 'done'; }).length]
         ]) +
         UI.card({
@@ -665,7 +657,7 @@
           body: tDayNav() +
             UI.tabs([
               { k: 'todo', t: '待办' }, { k: 'doing', t: '进行中' },
-              { k: 'done', t: '已完成' }, { k: 'archive', t: '未完成' }, { k: 'all', t: '全部' }
+              { k: 'done', t: '已完成' }, { k: 'all', t: '全部' }
             ], st, 'st') +
             '<div style="height:14px"></div>' +
             Cats.filterBar('taskTags', tag, { label: '标签' }) +
@@ -717,7 +709,7 @@
       });
       var od = { high: 0, mid: 1, low: 2 };
       arr.sort(function (a, b) {
-        var s = (a.status === 'done' || a.status === 'archive' ? 1 : 0) - (b.status === 'done' || b.status === 'archive' ? 1 : 0);
+        var s = (a.status === 'done' ? 1 : 0) - (b.status === 'done' ? 1 : 0);
         if (s) return s;
         var d = (a.due || '9999').localeCompare(b.due || '9999');
         if (d) return d;
@@ -750,7 +742,7 @@
           extraBar: function (cur) {
             var ps = [
               { k: '', t: '全部' }, { k: 'todo', t: '待办' },
-              { k: 'doing', t: '进行中' }, { k: 'done', t: '已完成' }, { k: 'archive', t: '未完成' }
+              { k: 'doing', t: '进行中' }, { k: 'done', t: '已完成' }
             ];
             return UI.pills(ps, cur === 'open' ? '' : cur, 'histFilter');
           },
@@ -768,8 +760,7 @@
               '<div class="item-meta">' +
               '<span class="badge ' + PRIO[x.prio || 'mid'].c + '">' + PRIO[x.prio || 'mid'].t + '优先</span>' +
               (x.status === 'doing' ? '<span class="badge info">进行中</span>' : '') +
-              (x.status === 'archive' ? '<span class="badge grey">未完成</span>' : '') +
-              (x.tag ? '<span class="badge">#' + esc(x.tag) + '</span>' : '') +
+                      (x.tag ? '<span class="badge">#' + esc(x.tag) + '</span>' : '') +
               (x.due ? '<span class="badge grey">📅 ' + U.fmtDate(x.due) + '</span>' : '') +
               '</div>' +
               (x.desc ? '<div class="item-note">' + esc(x.desc) + '</div>' : '') +
@@ -840,16 +831,6 @@
         var x = D().tasks.filter(function (a) { return a.id === t.dataset.id; })[0];
         if (!x) return;
         x.status = 'doing'; Store.save(); App.refresh();
-      },
-      arch: function (t) {
-        var x = D().tasks.filter(function (a) { return a.id === t.dataset.id; })[0];
-        if (!x) return;
-        x.status = 'archive'; delete x.doneAt; Store.save(); App.refresh(); U.toast('已标记为未完成');
-      },
-      untodo: function (t) {
-        var x = D().tasks.filter(function (a) { return a.id === t.dataset.id; })[0];
-        if (!x) return;
-        x.status = 'todo'; delete x.doneAt; Store.save(); App.refresh(); U.toast('已回到待办');
       },
       subadd: function (t) {
         var x = D().tasks.filter(function (a) { return a.id === t.dataset.id; })[0];

@@ -117,6 +117,14 @@
           localStorage.setItem(KEY, JSON.stringify(this.data));
         }
       } catch (e) {}
+      // 任务「未完成(archive)」功能下线、与「逾期」合并：历史 archive 任务迁回待办（仅一次性）
+      try {
+        if (!this.data.settings._archiveMigrated) {
+          (this.data.tasks || []).forEach(function (x) { if (x.status === 'archive') { x.status = 'todo'; delete x.doneAt; } });
+          this.data.settings._archiveMigrated = true;
+          localStorage.setItem(KEY, JSON.stringify(this.data));
+        }
+      } catch (e) {}
       // 兜底：若「加载时」本机 localStorage 为空（或被 webview 清空），尝试用 IndexedDB 镜像恢复
       try {
         Store._restoring = true;

@@ -76,8 +76,8 @@
 
       var tasks = D().tasks || [];
       var st = function (x) { return x.status; };
-      var dueCnt = tasks.filter(function (x) { return st(x) !== 'done' && st(x) !== 'archive' && x.due && U.dayDiff(t, x.due) >= 0; }).length;
-      var overCnt = tasks.filter(function (x) { return st(x) !== 'done' && st(x) !== 'archive' && x.due && U.dayDiff(t, x.due) < 0; }).length;
+      var dueCnt = tasks.filter(function (x) { return st(x) !== 'done' && x.due && U.dayDiff(t, x.due) >= 0; }).length;
+      var overCnt = tasks.filter(function (x) { return st(x) !== 'done' && x.due && U.dayDiff(t, x.due) < 0; }).length;
 
       var ann = D().anniv.filter(function (x) {
         var n = U.dayDiff(t, nextDate(x));
