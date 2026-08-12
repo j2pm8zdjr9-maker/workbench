@@ -553,15 +553,15 @@
     var done = x.done;
     var priceTxt = num(x.price) ? U.money(num(x.price)) : '';
     var qtyTxt = (num(x.qty) && num(x.qty) !== 1) ? num(x.qty) + ' 件' : '';
-    return '<div class="item' + (done ? ' done' : '') + '">' +
+    var meta = (qtyTxt ? '<span class="badge grey">' + esc(qtyTxt) + '</span>' : '') +
+      (priceTxt ? '<span class="badge">' + esc(priceTxt) + '</span>' : '') +
+      (x.note ? '<span>' + esc(x.note) + '</span>' : '');
+    return '<div class="item clickable' + (done ? ' done' : '') + '" data-toggle>' +
       '<div class="item-check"><button class="check tap' + (done ? ' on' : '') + '" data-act="btoggle" data-id="' + x.id + '">' + (done ? '✓' : '') + '</button></div>' +
       '<div class="item-main">' +
       '<div class="item-title' + (done ? ' strike' : '') + '">' + esc(x.name) + '</div>' +
-      '<div class="item-meta">' +
-      (qtyTxt ? '<span class="badge grey">' + esc(qtyTxt) + '</span>' : '') +
-      (priceTxt ? '<span class="badge">' + esc(priceTxt) + '</span>' : '') +
-      (x.note ? '<span>' + esc(x.note) + '</span>' : '') +
-      '</div></div>' + UI.ops(x.id, 'bedit', 'bdel') + '</div>';
+      '</div>' +
+      '<div class="item-detail"><div class="item-meta">' + meta + '</div>' + UI.ops(x.id, 'bedit', 'bdel') + '</div></div>';
   }
 
   // 耗材渲染（供 ListPager 复用）
@@ -573,12 +573,13 @@
     var elapsed = U.dayDiff(open, U.today());
     var pct = Math.max(0, Math.min(100, Math.round(elapsed / cycle * 100)));
     var renewBtn = '<button class="link-btn tap" data-act="crenew" data-id="' + x.id + '">🔄 换新</button>';
-    return '<div class="item"><div class="item-main">' +
-      '<div class="row between"><span class="item-title">🔔 ' + esc(x.name) + '</span><span class="badge ' + dueCls + '">📅 ' + dueTxt + '</span></div>' +
-      '<div class="item-meta"><span>开封 ' + U.fmtDate(open) + '</span><span class="badge grey">周期 ' + cycle + ' 天</span>' +
+    var detail = '<div class="item-meta"><span>开封 ' + U.fmtDate(open) + '</span><span class="badge grey">周期 ' + cycle + ' 天</span>' +
       (x.note ? '<span>' + esc(x.note) + '</span>' : '') + '</div>' +
-      '<div style="margin:8px 0">' + UI.bar(pct) + '</div>' +
-      '</div>' + UI.ops(x.id, 'cedit', 'cdel', renewBtn) + '</div>';
+      '<div style="margin:8px 0">' + UI.bar(pct) + '</div>';
+    return '<div class="item clickable" data-toggle><div class="item-main">' +
+      '<div class="row between"><span class="item-title">🔔 ' + esc(x.name) + '</span><span class="badge ' + dueCls + '">📅 ' + dueTxt + '</span></div>' +
+      '</div>' +
+      '<div class="item-detail">' + detail + UI.ops(x.id, 'cedit', 'cdel', renewBtn) + '</div></div>';
   }
 
   var items = {
@@ -866,17 +867,19 @@
             var x = it.x;
             if (it.k === 'stock') {
               var un = x.uname && x.uname !== '%' ? x.uname : '';
-              return '<div class="item"><div class="item-main">' +
-                '<div class="item-title">' + esc(x.name) + (x.cat ? ' <span class="badge grey">' + esc(x.cat) + '</span>' : '') + (isLow(x) ? ' <span class="badge danger">预警</span>' : '') + '</div>' +
-                '<div class="item-meta"><span>购入 ' + U.fmtDate(lastBuyDate(x)) + '</span>' +
+              var detail = '<div class="item-meta"><span>购入 ' + U.fmtDate(lastBuyDate(x)) + '</span>' +
                 '<span class="badge grey">余 ' + num(x.left) + '/' + num(x.qty) + (un ? un : '') + '</span>' +
-                (x.note ? '<span>' + esc(x.note) + '</span>' : '') + '</div></div>' +
-                UI.ops(x.id, null, 'hdel') + '</div>';
+                (x.note ? '<span>' + esc(x.note) + '</span>' : '') + '</div>';
+              return '<div class="item clickable" data-toggle><div class="item-main">' +
+                '<div class="item-title">' + esc(x.name) + (x.cat ? ' <span class="badge grey">' + esc(x.cat) + '</span>' : '') + (isLow(x) ? ' <span class="badge danger">预警</span>' : '') + '</div>' +
+                '</div>' +
+                '<div class="item-detail">' + detail + UI.ops(x.id, null, 'hdel') + '</div></div>';
             } else {
-              return '<div class="item"><div class="item-main">' +
+              var cdetail = '<div class="item-meta"><span>开封 ' + U.fmtDate(x.open) + '</span><span class="badge grey">周期 ' + num(x.cycle) + ' 天</span></div>';
+              return '<div class="item clickable" data-toggle><div class="item-main">' +
                 '<div class="item-title">🔔 ' + esc(x.name) + '</div>' +
-                '<div class="item-meta"><span>开封 ' + U.fmtDate(x.open) + '</span><span class="badge grey">周期 ' + num(x.cycle) + ' 天</span></div></div>' +
-                UI.ops(x.id, null, 'hdel') + '</div>';
+                '</div>' +
+                '<div class="item-detail">' + cdetail + UI.ops(x.id, null, 'hdel') + '</div></div>';
             }
           },
           acts: {
