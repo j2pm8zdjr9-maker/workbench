@@ -61,7 +61,7 @@
     addDialog: function (ns) {
       return new Promise(function (resolve) {
         var el = UI.sheet('新增分类',
-          '<div class="field full"><input class="input" id="nc" placeholder="输入分类名称" maxlength="20"></div>',
+          '<div class="field full"><div class="field-r"><input class="input" id="nc" placeholder="输入分类名称" maxlength="20"></div></div>',
           '<button class="btn primary tap" data-ok style="width:100%">添加</button>');
         var input = el.querySelector('#nc');
         setTimeout(function () { input.focus(); }, 60);
@@ -190,8 +190,8 @@
           '</div></div>' +
           '<p class="small muted" style="margin:12px 0">自定义分类，新增或删除都会自动保存；上下箭头可调整顺序，常用的排前面（按上面数量直接显示为固定胶囊）。</p>' +
           '<div class="form-grid">' +
-          '<div class="field full"><input class="input" id="newCat" placeholder="输入新分类名称" maxlength="20"></div>' +
-          '<div class="field full"><button class="btn primary tap" data-act="catAdd" style="width:100%">+ 添加分类</button></div>' +
+          '<div class="field full"><div class="field-r"><input class="input" id="newCat" placeholder="输入新分类名称" maxlength="20"></div></div>' +
+          '<div class="field full"><div class="field-r"><button class="btn primary tap" data-act="catAdd" style="width:100%">+ 添加分类</button></div></div>' +
           '</div><div style="height:8px"></div>' +
           (cats.length ? '<div class="list">' + cats.map(function (c, i) {
             return '<div class="item" style="padding:10px 12px"><div class="item-main"><div class="item-title">' + U.esc(c) + '</div></div>' +

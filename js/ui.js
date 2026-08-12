@@ -356,9 +356,11 @@
                 '<button type="button" class="field-clear tap" data-clr="' + esc(f.k) + '" aria-label="清除日期" title="清除（设为未选择 / 进行中）">✕</button></span>';
             }
           }
-          return '<div class="' + cls + '"' + whenAttr + '>' + (f.type === 'checkbox' ? '' : '<label>' + esc(f.label) + (f.req ? ' <span class="req-star">*</span>' : '') + '</label>') + inner +
+          var labelHtml = f.type === 'checkbox' ? '' : '<label>' + esc(f.label) + (f.req ? ' <span class="req-star">*</span>' : '') + '</label>';
+          return '<div class="' + cls + '"' + whenAttr + '>' + labelHtml +
+            '<div class="field-r">' + inner +
             (f.hint ? '<span class="small muted">' + esc(f.hint) + '</span>' : '') +
-            '<span class="field-err"></span></div>';
+            '<span class="field-err"></span></div></div>';
         }).join('') + '</div>';
 
         var liveHtml = cfg.live ? '<div class="form-live" id="formLive"></div>' : '';

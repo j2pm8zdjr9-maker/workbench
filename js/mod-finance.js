@@ -528,7 +528,7 @@
           }).join('');
           return '<div class="small muted" style="margin:0 0 8px">' + title + '（一级分类）</div>' +
             (blocks || UI.empty('还没有分类')) +
-            '<div class="field full" style="margin-top:4px"><input class="input" id="newcat-' + key + '" placeholder="新增' + title + '"></div>' +
+            '<div class="field full" style="margin-top:4px"><div class="field-r"><input class="input" id="newcat-' + key + '" placeholder="新增' + title + '"></div></div>' +
             '<button class="btn primary sm tap" data-act="finCatAdd" data-k="' + key + '" style="margin-bottom:14px">+ 添加' + title + '</button>';
         }
         function renderAll() { return section('catExpense', '支出分类') + '<div style="height:6px"></div>' + section('catIncome', '收入分类'); }

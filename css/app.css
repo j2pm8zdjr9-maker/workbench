@@ -394,15 +394,20 @@ a{ color:var(--olive-deep); text-decoration:none; }
 .badge.cream{ background:var(--cream); color:#7A5A1E; }
 .badge.purple{ background:rgba(140,99,168,.14); color:#7A4FA0; }
 
-/* 表单 */
-.field{ display:flex; flex-direction:column; gap:7px; }
-.field > label{ font-size:13px; color:var(--brown-2); font-weight:550; }
+/* 表单：左标签 + 右内容（仿账单详情行） */
+.form-grid{ display:flex; flex-direction:column; gap:0; }
+.field{ display:flex; flex-direction:row; align-items:flex-start; gap:12px; padding:14px 0; border-bottom:1px solid var(--line-2); }
+.field:last-child{ border-bottom:none; }
+.field.full{ display:flex; }
+.field > label{ flex:0 0 84px; padding-top:12px; font-size:13px; color:var(--brown-2); font-weight:550; line-height:1.4; }
+.field-r{ flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
 .input, .select, .textarea{
   width:100%; padding:13px 14px; min-height:50px;
   border:1px solid var(--line-2); border-radius:12px;
   background:var(--card); color:var(--brown); font-size:16px; /* 16px 防 iOS 缩放 */
   transition:border-color var(--t), box-shadow var(--t), background-color var(--t);
 }
+.field-r .input, .field-r .select, .field-r .textarea{ text-align:right; }
 .textarea{ min-height:110px; resize:vertical; line-height:1.7; }
 .select{ appearance:none; background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236A544E' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 13px center; padding-right:38px; }
 .input:hover,.select:hover,.textarea:hover{ border-color:var(--olive-24); }
@@ -410,8 +415,6 @@ a{ color:var(--olive-deep); text-decoration:none; }
   outline:none; border-color:var(--olive-soft); box-shadow:0 0 0 3px var(--olive-10); background:var(--card);
 }
 .input::placeholder,.textarea::placeholder{ color:var(--brown-4); }
-.form-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
-.form-grid .full{ grid-column:1/-1; }
 .req-star{ color:var(--danger); font-weight:600; margin-left:1px; }
 
 /* 日期字段可清除：点击 ✕ 清空（进行中 / 未选择） */
@@ -801,7 +804,6 @@ table.tbl td.ops{ white-space:nowrap; text-align:right; }
   .view{ padding:20px 16px calc(64px + env(safe-area-inset-bottom)); }
   .card{ padding:17px 15px; border-radius:16px; }
   .page-head h2{ font-size:20px; }
-  .form-grid{ grid-template-columns:1fr; gap:14px; }
   .modal-mask{ padding:0; align-items:flex-end; }
   .modal{
     max-width:none; border-radius:22px 22px 0 0;

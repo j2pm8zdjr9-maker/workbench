@@ -350,7 +350,7 @@
         UI.card({
           title: '🔒 已加密', sub: '进入需要密码',
           body: '<p class="small muted">本板块已设置独立访问密码，输入密码后查看。</p>' +
-            '<div class="field"><input class="input" id="pw" type="password" data-enter="unlock" placeholder="输入访问密码" autofocus></div>' +
+            '<div class="field"><div class="field-r"><input class="input" id="pw" type="password" data-enter="unlock" placeholder="输入访问密码" autofocus></div></div>' +
             '<button class="btn primary tap" data-act="unlock" style="width:100%;margin-top:6px">解锁查看</button>' +
             '<p class="small muted" style="margin-top:10px">密码仅保存在本机浏览器，开发者与任何第三方都看不到；若忘记密码将无法恢复日记内容。</p>'
         });
@@ -434,16 +434,16 @@
     }
 
     var body = '<div class="diary-editor">' +
-      '<div class="field"><label>日期</label><input class="input" type="date" name="date" value="' + esc(tmp.date) + '"></div>' +
-      '<div class="field"><label>标题</label><input class="input" name="title" value="' + esc(tmp.title) + '" placeholder="今天发生了什么…"></div>' +
-      '<div class="field"><label>天气</label><div class="chip-row" id="wbox">' + wChips() + '</div></div>' +
-      '<div class="field"><label>心情</label><div class="chip-row" id="mbox">' + mChips() + '</div></div>' +
-      '<div class="field"><label>标签（可多选，也可新建）</label><div class="chip-row wrap" id="tbox">' + tChips() + '</div>' +
+      '<div class="field"><label>日期</label><div class="field-r"><input class="input" type="date" name="date" value="' + esc(tmp.date) + '"></div></div>' +
+      '<div class="field"><label>标题</label><div class="field-r"><input class="input" name="title" value="' + esc(tmp.title) + '" placeholder="今天发生了什么…"></div></div>' +
+      '<div class="field"><label>天气</label><div class="field-r"><div class="chip-row" id="wbox">' + wChips() + '</div></div></div>' +
+      '<div class="field"><label>心情</label><div class="field-r"><div class="chip-row" id="mbox">' + mChips() + '</div></div></div>' +
+      '<div class="field"><label>标签（可多选，也可新建）</label><div class="field-r"><div class="chip-row wrap" id="tbox">' + tChips() + '</div></div></div>' +
       '<div class="row" style="gap:8px;margin-top:6px"><input class="input" id="newtag" placeholder="新建标签，如：旅行 / 复盘"><button class="btn ghost sm tap" data-act="addtag">＋ 添加</button></div>' +
-      '<div class="field"><label>图片（本地保存，自动压缩）</label>' +
+      '<div class="field"><label>图片（本地保存，自动压缩）</label><div class="field-r">' +
       '<input type="file" accept="image/*" multiple id="diFile" class="di-file">' +
-      '<div id="imgs" style="margin-top:8px">' + iGrid() + '</div></div>' +
-      '<div class="field full"><label>正文</label><textarea class="textarea di-body" name="body" rows="8" placeholder="写点什么…支持换行书写">' + esc(tmp.body) + '</textarea></div>' +
+      '<div id="imgs" style="margin-top:8px">' + iGrid() + '</div></div></div>' +
+      '<div class="field full"><label>正文</label><div class="field-r"><textarea class="textarea di-body" name="body" rows="8" placeholder="写点什么…支持换行书写">' + esc(tmp.body) + '</textarea></div></div>' +
       '<label class="opt-row tap" style="min-height:50px"><input type="checkbox" name="pinned" ' + (tmp.pinned ? 'checked' : '') + ' style="width:20px;height:20px;accent-color:#8AA832"><span>📌 置顶这篇日记</span></label>' +
       '</div>';
 
@@ -581,8 +581,8 @@
   /* ============ 密码 ============ */
   function openSet() {
     var el = UI.sheet('🔒 设置访问密码',
-      '<div class="field"><label>新密码</label><input class="input" id="p1" type="password" placeholder="设置进入日记的密码"></div>' +
-      '<div class="field"><label>确认密码</label><input class="input" id="p2" type="password" placeholder="再输入一次"></div>',
+      '<div class="field"><label>新密码</label><div class="field-r"><input class="input" id="p1" type="password" placeholder="设置进入日记的密码"></div></div>' +
+      '<div class="field"><label>确认密码</label><div class="field-r"><input class="input" id="p2" type="password" placeholder="再输入一次"></div></div>',
       '<button class="btn ghost tap" data-x>取消</button><button class="btn primary tap" data-act="dosetpw">保存</button>');
     el.addEventListener('click', function (e) {
       if (!e.target.closest('[data-act="dosetpw"]')) return;
@@ -595,8 +595,8 @@
   }
   function openManage() {
     var el = UI.sheet('🔒 密码管理',
-      '<div class="field"><label>当前密码</label><input class="input" id="cp" type="password" placeholder="输入当前密码"></div>' +
-      '<div class="field"><label>新密码（留空 = 仅关闭加密）</label><input class="input" id="np" type="password" placeholder="不填则关闭密码"></div>',
+      '<div class="field"><label>当前密码</label><div class="field-r"><input class="input" id="cp" type="password" placeholder="输入当前密码"></div></div>' +
+      '<div class="field"><label>新密码（留空 = 仅关闭加密）</label><div class="field-r"><input class="input" id="np" type="password" placeholder="不填则关闭密码"></div></div>',
       '<button class="btn ghost tap" data-x>取消</button><button class="btn primary tap" data-act="dochgpw">保存</button>');
     el.addEventListener('click', function (e) {
       if (!e.target.closest('[data-act="dochgpw"]')) return;
