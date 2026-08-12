@@ -413,8 +413,10 @@
   function examCatFilter() {
     var subj = Cats.get('examSubject'), con = Cats.get('examContent');
     if (!subj.length && !con.length) return '';
-    return (subj.length ? Cats.filterBar('examSubject', { label: '科目' }) : '') +
-      (con.length ? (subj.length ? '<div style="height:4px"></div>' : '') + Cats.filterBar('examContent', { label: '内容' }) : '');
+    return '<div class="exam-filter">' +
+      (subj.length ? Cats.filterBar('examSubject', { label: '科目', margin: '4px' }) : '') +
+      (con.length ? Cats.filterBar('examContent', { label: '内容', margin: '0' }) : '') +
+      '</div>';
   }
   function examFilterFn(x) {
     var subj = Cats.sel('examSubject');
@@ -633,7 +635,8 @@
         var cls = n < 0 ? 'grey' : n <= 7 ? 'danger' : n <= 30 ? 'warn' : '';
         return '<div class="item' + (n >= 0 && n <= 30 ? ' hl' : '') + '">' +
           '<div class="item-main"><div class="item-title">' + esc(x.name) + '</div>' +
-          '<div class="item-meta"><span>' + U.fmtDate(x.date, true) + '</span>' + (x.note ? '<span>' + esc(x.note) + '</span>' : '') + '</div></div>' +
+          '<div class="item-meta"><span>' + U.fmtDate(x.date, true) + '</span></div>' +
+          (x.note ? '<div class="note-text">' + esc(x.note) + '</div>' : '') + '</div>' +
           '<div style="text-align:center"><div class="big-num" style="color:' + (n < 0 ? '#9A8A85' : '#6E8A28') + '">' + (n < 0 ? '已结束' : n === 0 ? '就是今天' : n) + '</div>' +
           (n > 0 ? '<div class="small muted">天后开考</div>' : '') + '</div>' +
           UI.ops(x.id, 'eedit', 'edel') + '</div>';

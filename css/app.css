@@ -369,6 +369,9 @@ a{ color:var(--olive-deep); text-decoration:none; }
 
 /* 筛选小药丸 */
 .pills{ display:flex; gap:8px; flex-wrap:wrap; }
+.cat-filter-row{ margin:0 0 8px; }
+.exam-filter .cat-filter-row{ margin-bottom:4px; }
+.exam-filter .cat-filter-row:last-child{ margin-bottom:0; }
 .pill{
   padding:7px 14px; min-height:36px; display:inline-flex; align-items:center; gap:6px;
   border-radius:20px; border:1px solid var(--line-2); background:var(--card);
@@ -472,9 +475,11 @@ a{ color:var(--olive-deep); text-decoration:none; }
 .item .item-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
 .item .item-title{ font-size:14.5px; font-weight:560; line-height:1.4; word-break:break-word; min-width:0; flex:1 1 auto; }
 .item .row.between .item-title{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.item .item-meta{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; font-size:12.5px; line-height:1.45; color:var(--brown-3); }
-.item .item-meta > span:not(.badge){ white-space:nowrap; }
-.item .item-note{ font-size:13px; line-height:1.45; color:var(--brown-2); white-space:pre-wrap; word-break:break-word; }
+.item .item-meta{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; font-size:12.5px; line-height:1.45; color:var(--brown-3); min-width:0; }
+.item .item-meta > span:not(.badge){ white-space:normal; word-break:break-word; overflow-wrap:anywhere; }
+.item .item-note,
+.item .note-text{ font-size:13px; line-height:1.45; color:var(--brown-2); white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; max-width:100%; }
+.item .note-text{ margin-top:4px; }
 /* 备注折叠（原生 <details> 包裹，默认收起、点击展开、内容满宽） */
 .note-fold{ margin-top:6px; }
 .note-sum{ cursor:pointer; font-size:12.5px; color:var(--brown-3); list-style:none; padding:3px 0; user-select:none; -webkit-user-select:none; }
@@ -629,7 +634,7 @@ table.tbl td.ops{ white-space:nowrap; text-align:right; }
 /* 备注折叠指示 */
 .item-chev{ margin-left:auto; color:var(--brown-3); font-size:12px; transition:transform var(--t); flex-shrink:0; }
 .item.clickable.open .item-chev{ transform:rotate(90deg); }
-.item-note-line{ margin-top:6px; padding:8px 10px; background:var(--olive-05); border-radius:8px; font-size:13px; color:var(--brown-2); line-height:1.5; word-break:break-word; }
+.item-note-line{ margin-top:6px; padding:8px 10px; background:var(--olive-05); border-radius:8px; font-size:13px; color:var(--brown-2); line-height:1.5; word-break:break-word; overflow-wrap:anywhere; }
 .legend{ display:flex; flex-wrap:wrap; gap:10px 18px; margin-top:12px; font-size:12.5px; color:var(--brown-2); }
 .legend i{ width:10px; height:10px; border-radius:3px; display:inline-block; margin-right:6px; }
 .hbar-row{ display:flex; flex-direction:column; gap:5px; padding:9px 0; border-bottom:1px solid var(--line); }

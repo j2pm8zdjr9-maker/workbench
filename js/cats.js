@@ -140,7 +140,8 @@
       var restSel = sel.filter(function (c) { return rest.indexOf(c) >= 0; });
       var flexLabel = restSel.length ? ('更多(' + restSel.length + ')') : '更多 ▾';
       html += '<button class="pill tap' + (restSel.length ? ' on' : '') + '" data-act="catMore" data-ns="' + ns + '" data-cur="' + U.esc(sel.join(',')) + '">' + U.esc(flexLabel) + '</button>';
-      return '<div class="row cat-filter-row" style="gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 8px">' +
+      var mb = opts.margin !== undefined ? opts.margin : '8px';
+      return '<div class="row cat-filter-row" style="gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 ' + mb + '">' +
         (opts.label ? '<span class="small muted">' + U.esc(opts.label) + '</span>' : '') + html + '</div>';
     },
 
