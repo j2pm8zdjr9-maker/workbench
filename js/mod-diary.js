@@ -427,7 +427,7 @@
       }).join('');
     }
     function iGrid() {
-      if (!tmp.imgs.length) return '<p class="small muted">还没有图片</p>';
+      if (!tmp.imgs.length) return '';
       return '<div class="img-grid">' + tmp.imgs.map(function (src, i) {
         return '<div class="img-thumb zoomable" data-act="zoom" data-src="' + src + '"><img src="' + src + '" alt=""><button type="button" class="img-x tap" data-act="delimg" data-i="' + i + '">✕</button></div>';
       }).join('') + '</div>';

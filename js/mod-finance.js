@@ -828,7 +828,7 @@
 
   function flowFields(type) {
     return [
-      { k: 'type', label: '类型', type: 'select', options: [{ v: 'out', t: '支出' }, { v: 'in', t: '收入' }], def: type || 'out', hint: '选择类型后分类会自动切换' },
+      { k: 'type', label: '类型', type: 'select', options: [{ v: 'out', t: '支出' }, { v: 'in', t: '收入' }], def: type || 'out' },
       { k: 'amount', label: '金额', type: 'number', min: 0, req: true, money: true },
       { k: 'acc', label: '账户', type: 'select', req: true, options: F().accounts.map(function (a) { return { v: a.id, t: a.name }; }) },
       { k: 'date', label: '日期', type: 'date', req: true, def: U.today() },

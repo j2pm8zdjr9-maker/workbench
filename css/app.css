@@ -399,7 +399,7 @@ a{ color:var(--olive-deep); text-decoration:none; }
 .field{ display:flex; flex-direction:row; align-items:flex-start; gap:12px; padding:13px 2px; border-bottom:1px solid var(--line-2); }
 .field:last-child{ border-bottom:none; }
 .field.full{ display:flex; }
-.field > label{ flex:0 0 84px; padding-top:11px; font-size:16px; color:var(--brown-2); font-weight:550; line-height:1.4; }
+.field > label{ flex:0 0 72px; padding-top:11px; font-size:16px; color:var(--brown-2); font-weight:550; line-height:1.4; }
 .field-r{ flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
 /* 默认输入框保持原有边框，弹窗表单内(.field-r)才用无边框详情风格 */
 .input, .select, .textarea{
@@ -415,19 +415,23 @@ a{ color:var(--olive-deep); text-decoration:none; }
 .input::placeholder,.textarea::placeholder{ color:var(--brown-4); }
 .field-r .input, .field-r .select, .field-r .textarea{
   padding:11px 6px; min-height:44px;
-  border:none; border-radius:10px;
+  border:none; border-radius:0;
   background:transparent; text-align:right;
-  transition:background-color var(--t), box-shadow var(--t);
+  box-shadow:none;
 }
 .field-r .textarea{ text-align:left; }
 .field-r .chip-row{ justify-content:flex-end; }
 .field-r .row{ justify-content:flex-end; }
+/* 日期快捷标签在同一行，超出可轻扫滚动 */
+.field-r .chip-row.date-quick{ flex-wrap:nowrap; justify-content:flex-start; gap:2px; overflow-x:auto; scrollbar-width:none; }
+.field-r .chip-row.date-quick::-webkit-scrollbar{ display:none; }
+.field-r .chip-row.date-quick .chip{ padding:2px 5px; font-size:11px; white-space:nowrap; }
 .textarea{ min-height:110px; resize:vertical; line-height:1.7; }
 .select{ appearance:none; background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236A544E' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 13px center; padding-right:38px; }
 .field-r .select{ background-position:right 6px center; padding-right:30px; }
-.field-r .input:hover,.field-r .select:hover,.field-r .textarea:hover{ background:var(--olive-05); }
+.field-r .input:hover,.field-r .select:hover,.field-r .textarea:hover{ background:transparent; }
 .field-r .input:focus,.field-r .select:focus,.field-r .textarea:focus{
-  outline:none; background:var(--olive-10); box-shadow:none;
+  outline:none; background:transparent; box-shadow:none;
 }
 .req-star{ color:var(--danger); font-weight:600; margin-left:1px; }
 
@@ -447,7 +451,7 @@ a{ color:var(--olive-deep); text-decoration:none; }
 .field.err > label{ color:var(--danger); }
 .field.err .input, .field.err .select, .field.err .textarea{ border-color:var(--danger); box-shadow:0 0 0 3px rgba(180,85,63,.12); }
 .field.err .field-r .input, .field.err .field-r .select, .field.err .field-r .textarea{
-  border:none; box-shadow:none; background:rgba(180,85,63,.08); color:var(--danger);
+  border:none; box-shadow:none; background:transparent; color:var(--danger);
 }
 .field.err .field-r .input::placeholder, .field.err .field-r .textarea::placeholder{ color:var(--danger); opacity:.7; }
 .field-err{ display:none; font-size:12.5px; color:var(--danger); line-height:1.5; margin-top:1px; }

@@ -342,10 +342,6 @@
                 return '<button type="button" class="chip tap" data-quick="' + esc(String(f.k)) + '::' + esc(String(q)) + '">' + esc(String(q)) + (f.quickUnit ? esc(String(f.quickUnit)) : '') + '</button>';
               }).join('') + '</div>';
             }
-            if (isMoney) {
-              var mp = (v === '' || v === null || v === undefined) ? '—' : U.money(num(v));
-              inner += '<div class="money-prev" data-money-prev="' + f.k + '">≈ <b>' + esc(mp) + '</b></div>';
-            }
             if (f.type === 'date' && !f.noDateQuick) {
               inner += '<div class="date-quick chip-row">' + dateQuickItems().map(function (q) {
                 return '<button type="button" class="chip ghost tap" data-dq="' + esc(f.k) + '::' + q[1] + '">' + esc(q[0]) + '</button>';
@@ -359,7 +355,6 @@
           var labelHtml = f.type === 'checkbox' ? '' : '<label>' + esc(f.label) + (f.req ? ' <span class="req-star">*</span>' : '') + '</label>';
           return '<div class="' + cls + '"' + whenAttr + '>' + labelHtml +
             '<div class="field-r">' + inner +
-            (f.hint ? '<span class="small muted">' + esc(f.hint) + '</span>' : '') +
             '<span class="field-err"></span></div></div>';
         }).join('') + '</div>';
 
