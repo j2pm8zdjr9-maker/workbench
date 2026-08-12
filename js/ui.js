@@ -315,13 +315,21 @@
           } else if (f.type === 'select') {
             var catAttr = f.catns ? ' data-catns="' + f.catns + '" data-prev="' + esc(String(v)) + '"' : '';
             var opts = typeof f.options === 'function' ? f.options(vals) : (f.options || []);
-            inner = '<select class="select" name="' + f.k + '"' + catAttr + '>' +
-              (f.ph ? '<option value="">' + esc(f.ph) + '</option>' : '') +
+            var selOpt = null;
+            opts.forEach(function (o) {
+              var val = typeof o === 'object' ? o.v : o;
+              if (String(val) === String(v)) selOpt = o;
+            });
+            var selText = selOpt ? (typeof selOpt === 'object' ? selOpt.t : selOpt) : (v ? String(v) : '');
+            var optionsHtml = (f.ph ? '<option value="">' + esc(f.ph) + '</option>' : '') +
               opts.map(function (o) {
                 var val = typeof o === 'object' ? o.v : o, txt = typeof o === 'object' ? o.t : o;
                 return '<option value="' + esc(val) + '"' + (String(val) === String(v) ? ' selected' : '') + '>' + esc(txt) + '</option>';
               }).join('') +
-              (f.catns ? '<option value="__custom">＋ 自定义…</option>' : '') + '</select>';
+              (f.catns ? '<option value="__custom">＋ 自定义…</option>' : '');
+            inner = '<select class="select native-select" name="' + f.k + '"' + catAttr + '>' + optionsHtml + '</select>' +
+              '<button type="button" class="select-trigger tap" data-select="' + esc(f.k) + '" aria-label="选择' + esc(f.label) + '">' +
+              '<span class="select-trigger-text">' + esc(selText || f.ph || '请选择') + '</span></button>';
           } else if (f.type === 'checkbox') {
             inner = '<label class="opt-row tap" style="min-height:50px"><input type="checkbox" name="' + f.k + '" ' + (v ? 'checked' : '') + ' style="width:20px;height:20px;accent-color:#8AA832">' +
               '<span>' + esc(f.cbText || f.label) + '</span></label>';
@@ -444,8 +452,20 @@
               (hasCustom ? '<option value="__custom">＋ 自定义…</option>' : '');
             sel.innerHTML = html;
             var still = opts.some(function (o) { var val = typeof o === 'object' ? o.v : o; return String(val) === String(cur); });
-            if (cur && !still && cur !== '__custom') { sel.value = ''; sel.dispatchEvent(new Event('change')); }
+            if (cur && !still && cur !== '__custom') { sel.value = ''; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+            updateSelectTrigger(f.k);
           });
+        }
+        function updateSelectTrigger(name) {
+          var sel = el.querySelector('select[name="' + name + '"]');
+          var trig = el.querySelector('.select-trigger[data-select="' + name + '"]');
+          if (!sel || !trig) return;
+          var opt = null;
+          for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === sel.value) { opt = sel.options[i]; break; } }
+          var ph = sel.querySelector('option[value=""]');
+          var txt = opt ? opt.textContent : (ph ? ph.textContent : '请选择');
+          var ttext = trig.querySelector('.select-trigger-text');
+          if (ttext) ttext.textContent = txt;
         }
         applyWhen();
         el.addEventListener('change', function (e) {
@@ -454,6 +474,7 @@
           if (nm) applyDepends(nm);
         });
         if (cfg.onMount) cfg.onMount(el, fields);
+        fields.forEach(function (f) { if (f.type === 'select') updateSelectTrigger(f.k); });
 
         el.addEventListener('input', function (e) {
           var inp = e.target.closest('input[name],textarea[name]');
@@ -492,6 +513,28 @@
             if (ci) { ci.value = ''; ci.dispatchEvent(new Event('input')); ci.dispatchEvent(new Event('change')); }
             return;
           }
+          var trig = e.target.closest('.select-trigger');
+          if (trig) {
+            e.preventDefault();
+            var tname = trig.dataset.select;
+            var tsel = el.querySelector('select[name="' + tname + '"]');
+            if (!tsel) return;
+            var tfield = trig.closest('[data-field]');
+            var tlabel = tfield ? tfield.querySelector(':scope > label') : null;
+            var topts = [];
+            for (var j = 0; j < tsel.options.length; j++) {
+              var to = tsel.options[j];
+              if (!to.value && !to.textContent) continue;
+              topts.push({ v: to.value, t: to.textContent });
+            }
+            UI.popPicker(tlabel ? tlabel.textContent.trim() : '请选择', topts, tsel.value, function (val) {
+              tsel.value = val;
+              updateSelectTrigger(tname);
+              tsel.dispatchEvent(new Event('change', { bubbles: true }));
+              tsel.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+            return;
+          }
           if (e.target.closest('[data-ok]')) {
             var out = {}, bad = null, firstErr = null;
             fields.forEach(function (f) {
@@ -524,7 +567,7 @@
 
         // 初次渲染：金额预览 + 实时摘要 + 自动聚焦首个输入
         refreshMoney(); refreshLive();
-        var first = el.querySelector('.input:not([type=hidden]),.textarea,.select');
+        var first = el.querySelector('.input:not([type=hidden]),.textarea,.select:not(.native-select)');
         if (first && window.matchMedia('(min-width:901px)').matches) setTimeout(function () { try { first.focus(); } catch (e) {} }, 90);
       });
     },
@@ -563,6 +606,35 @@
         if (e.target === el || e.target.closest('[data-x]')) { el.remove(); UI.unlock(); modalA11y.close(el); }
       });
       return el;
+    },
+
+    /* 轻量单选弹出框：居中小型卡片，选项右对齐，宽度贴合最长选项 */
+    popPicker: function (title, options, current, callback) {
+      var root = document.getElementById('modalRoot');
+      var overlay = document.createElement('div');
+      overlay.className = 'pop-picker-overlay';
+      var items = options.map(function (o) {
+        var val = typeof o === 'object' ? o.v : o;
+        var txt = typeof o === 'object' ? o.t : o;
+        var sel = String(val) === String(current) ? ' selected' : '';
+        return '<button type="button" class="pop-picker-item tap' + sel + '" data-val="' + esc(String(val)) + '">' +
+          '<span class="pop-check">' + (sel ? '✓' : '') + '</span>' +
+          '<span class="pop-text">' + esc(txt) + '</span></button>';
+      }).join('');
+      overlay.innerHTML = '<div class="pop-picker" role="dialog" aria-modal="true" aria-label="' + esc(title || '请选择') + '">' +
+        '<div class="pop-picker-head"><h4>' + esc(title || '请选择') + '</h4><button class="x-btn tap" data-close aria-label="关闭">✕</button></div>' +
+        '<div class="pop-picker-body">' + items + '</div></div>';
+      root.appendChild(overlay);
+      UI.lock();
+      function close() { overlay.remove(); UI.unlock(); }
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay || e.target.closest('[data-close]')) { close(); return; }
+        var item = e.target.closest('.pop-picker-item');
+        if (!item) return;
+        callback(item.dataset.val);
+        close();
+      });
+      return overlay;
     },
 
     /* 通用：删除确认 + 执行 */

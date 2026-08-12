@@ -84,10 +84,12 @@
       var ns = sel.dataset.catns;
       var prev = sel.dataset.prev || (Cats.get(ns)[0] || '');
       Cats.addDialog(ns).then(function (name) {
-        if (!name) { sel.value = prev; return; }
+        var ttext = sel.parentElement.querySelector('.select-trigger-text');
+        if (!name) { sel.value = prev; if (ttext) ttext.textContent = prev; return; }
         sel.innerHTML = Cats.optionHtml(ns) + '<option value="__custom">＋ 自定义…</option>';
         sel.value = name;
         sel.dataset.prev = name;
+        if (ttext) ttext.textContent = name;
       });
     },
 

@@ -422,17 +422,44 @@ a{ color:var(--olive-deep); text-decoration:none; }
 .field-r .textarea{ text-align:left; }
 .field-r .chip-row{ justify-content:flex-end; }
 .field-r .row{ justify-content:flex-end; }
-/* 日期快捷标签在同一行，超出可轻扫滚动 */
-.field-r .chip-row.date-quick{ width:100%; align-self:stretch; flex-wrap:nowrap; justify-content:flex-start; gap:2px; overflow-x:auto; scrollbar-width:none; }
+/* 日期快捷标签在同一行，与上方日期更紧凑 */
+.field-r .chip-row.date-quick{ width:100%; align-self:stretch; flex-wrap:nowrap; justify-content:flex-start; gap:2px; overflow-x:auto; scrollbar-width:none; margin-top:-2px; }
 .field-r .chip-row.date-quick::-webkit-scrollbar{ display:none; }
-.field-r .chip-row.date-quick .chip{ padding:2px 5px; font-size:11px; white-space:nowrap; }
+.field-r .chip-row.date-quick .chip{ padding:1px 4px; font-size:10.5px; white-space:nowrap; }
 .textarea{ min-height:110px; resize:vertical; line-height:1.7; }
+/* 表单内 select 改用自定义轻量单选器 */
+.field-r select.native-select{ position:absolute; top:0; left:0; opacity:0; pointer-events:none; width:1px; height:1px; }
+.field-r .select-trigger{
+  width:100%; min-height:44px; padding:11px 22px 11px 6px;
+  border:none; border-radius:0; background:transparent;
+  font-size:16px; color:var(--brown); text-align:right;
+  cursor:pointer; appearance:none;
+  background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236A544E' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 2px center; background-size:14px 14px;
+}
+.field-r .select-trigger-text{ display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.field-r .select-trigger:hover,.field-r .select-trigger:focus{ background-color:transparent; outline:none; }
+/* 日期/时间输入强制右对齐（覆盖 WebKit 原生伪元素） */
+.field-r input[type="date"], .field-r input[type="time"]{ text-align:right; }
+.field-r input[type="date"]::-webkit-datetime-edit, .field-r input[type="time"]::-webkit-datetime-edit{ text-align:right; }
+.field-r input[type="date"]::-webkit-date-and-time-value, .field-r input[type="time"]::-webkit-date-and-time-value{ text-align:right; }
 .select{ appearance:none; background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236A544E' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 13px center; padding-right:38px; }
 .field-r .select{ background-position:right 6px center; padding-right:30px; }
 .field-r .input:hover,.field-r .select:hover,.field-r .textarea:hover{ background:transparent; }
 .field-r .input:focus,.field-r .select:focus,.field-r .textarea:focus{
   outline:none; background:transparent; box-shadow:none;
 }
+
+/* 轻量单选弹出框：居中小卡片，选项右对齐，宽度贴合最长选项 */
+.pop-picker-overlay{ position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.35); backdrop-filter:blur(2px); }
+.pop-picker{ width:fit-content; min-width:180px; max-width:86vw; max-height:72vh; overflow:auto; background:var(--card); border-radius:18px; box-shadow:0 12px 40px rgba(0,0,0,.25); }
+.pop-picker-head{ display:flex; align-items:center; justify-content:space-between; padding:14px 18px 10px; }
+.pop-picker-head h4{ font-size:16px; font-weight:650; color:var(--brown); margin:0; }
+.pop-picker-body{ display:flex; flex-direction:column; gap:2px; padding:4px 10px 14px; }
+.pop-picker-item{ display:flex; align-items:center; gap:10px; width:100%; padding:11px 14px; border:none; border-radius:12px; background:transparent; font-size:16px; color:var(--brown); cursor:pointer; white-space:nowrap; }
+.pop-picker-item .pop-text{ flex:1; text-align:right; }
+.pop-picker-item .pop-check{ width:18px; text-align:left; color:var(--olive-deep); font-size:15px; }
+.pop-picker-item.selected{ background:var(--olive-05); color:var(--olive-deep); }
+.pop-picker-item:hover, .pop-picker-item:focus{ background:var(--olive-10); outline:none; }
 .req-star{ color:var(--danger); font-weight:600; margin-left:1px; }
 
 /* 日期字段可清除：点击 ✕ 清空（进行中 / 未选择） */
