@@ -50,14 +50,15 @@
   function renderFlowItem(f) {
     var sign = f.type === 'in' ? '+' : f.type === 'out' ? '-' : '';
     var color = f.type === 'in' ? '#6E8A28' : f.type === 'out' ? '#B4553F' : '#6E8A9B';
-    return '<div class="item"><div class="item-main">' +
-      '<div class="row between" style="gap:10px">' +
-      '<span class="item-title">' + esc(f.type === 'transfer' ? accName(f.acc) + ' → ' + accName(f.acc2) : (f.cat || '未分类')) + '</span>' +
-      '<span style="font-weight:700;color:' + color + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;margin-left:8px;" title="' + U.moneyFull(f.amount) + '">' + sign + money(f.amount).replace('¥', '¥') + '</span></div>' +
-      '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + '</span>' +
+    var title = f.type === 'transfer' ? accName(f.acc) + ' → ' + accName(f.acc2) : (f.cat || '未分类');
+    var main = '<div class="row between" style="gap:10px"><span class="item-title">' + esc(title) + '</span>' +
+      '<span style="font-weight:700;color:' + color + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;margin-left:8px;" title="' + U.moneyFull(f.amount) + '">' + sign + money(f.amount) + '</span></div>';
+    var detail = '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + '</span>' +
       (f.type !== 'transfer' ? '<span class="badge grey">' + esc(accName(f.acc)) + '</span>' : '<span class="badge info">转账</span>') +
-      (f.note ? '<span>' + esc(f.note) + '</span>' : '') + '</div>' +
-      '</div>' + UI.ops(f.id, 'fedit', 'fdel') + '</div>';
+      (f.note ? '<span>' + esc(f.note) + '</span>' : '') + '</div>' + UI.ops(f.id, 'fedit', 'fdel');
+    return '<div class="item clickable" data-toggle data-id="' + esc(f.id) + '">' +
+      '<div class="item-main">' + main + '</div>' +
+      '<div class="item-detail">' + detail + '</div></div>';
   }
 
   function finCategories() {

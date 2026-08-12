@@ -346,7 +346,6 @@
       });
       if (mod.mount) mod.mount(view);
       this.bindView(view, mod);
-      if (w.UI && UI.swipeActions) UI.swipeActions(view);
     },
 
     // 局部重绘（保持滚动位置）
@@ -361,6 +360,13 @@
       view._bound = mod.id;
       var self = this;
       view.onclick = function (e) {
+        // 通用展开/折叠：点击 .item.clickable[data-toggle] 切换 open（排除内部按钮与操作区）
+        var tog = e.target.closest('.item.clickable');
+        if (tog && tog.hasAttribute('data-toggle') && !e.target.closest('[data-act]') && !e.target.closest('.item-ops')) {
+          e.preventDefault();
+          tog.classList.toggle('open');
+          return;
+        }
         var t = e.target.closest('[data-act]');
         if (!t || !view.contains(t)) return;
         // 全局：列表分页 / 排序切换（各模块的列表页共用）
@@ -469,109 +475,6 @@
         g.style.display = any ? '' : 'none';
       });
     },
-
-    /* 全局搜索：跨模块检索内容 + 模块跳转 */
-    globalSearch: function (q) {
-      q = (q || '').trim().toLowerCase();
-      if (!q) return [];
-      var d = Store.data, self = this, out = [];
-      function add(mod, icon, title, sub) {
-        var m = self.modules[mod];
-        out.push({ mod: mod, modName: m ? m.name : '', icon: icon, title: title, sub: sub || '' });
-      }
-      self.order.forEach(function (id) {
-        var m = self.modules[id];
-        if (m && (m.name.toLowerCase().indexOf(q) >= 0 || id.indexOf(q) >= 0)) add(id, m.icon, m.name, '模块');
-      });
-      (d.tasks || []).forEach(function (t) { if (((t.title || '') + ' ' + (t.note || '') + ' ' + (t.tag || '')).toLowerCase().indexOf(q) >= 0) add('tasks', '📝', t.title || '(无标题)', (t.done ? '已完成' : '待办') + (t.tag ? ' · ' + t.tag : '')); });
-      (d.finance.flows || []).forEach(function (f) { if (((f.note || '') + ' ' + (f.cat || '') + ' ' + money(f.amount)).toLowerCase().indexOf(q) >= 0) add('finance', '💰', (f.type === 'out' ? '支出 ' : '收入 ') + money(f.amount), (f.cat || '') + (f.note ? ' · ' + f.note : '') + ' · ' + f.date); });
-      (d.media || []).forEach(function (m) { if ((m.title || '').toLowerCase().indexOf(q) >= 0) add('media', '🎬', m.title || '(未命名)', (m.type || '') + (m.status ? ' · ' + m.status : '')); });
-      if (d.diary) (d.diary.entries || []).forEach(function (e) { if ((e.text || '').toLowerCase().indexOf(q) >= 0) add('diary', '📔', (e.text || '').slice(0, 40), (e.date || '') + (e.tag ? ' · ' + e.tag : '')); });
-      (d.wish || []).forEach(function (w) { if ((w.name || '').toLowerCase().indexOf(q) >= 0) add('wish', '⭐', w.name, w.cat || ''); });
-      (d.social || []).forEach(function (s) { if (((s.name || '') + ' ' + (s.note || '')).toLowerCase().indexOf(q) >= 0) add('social', '🤝', s.name, s.cat || ''); });
-      (d.anniv || []).forEach(function (a) { if ((a.name || '').toLowerCase().indexOf(q) >= 0) add('anniv', '💞', a.name, a.type || ''); });
-      (d.items.stock || []).forEach(function (it) { if ((it.name || '').toLowerCase().indexOf(q) >= 0) add('items', '📦', it.name, '库存'); });
-      (d.items.buy || []).forEach(function (it) { if ((it.name || '').toLowerCase().indexOf(q) >= 0) add('items', '🛒', it.name, '采购'); });
-      (d.checkin.habits || []).forEach(function (h) { if ((h.name || '').toLowerCase().indexOf(q) >= 0) add('checkin', '✅', h.name, '打卡'); });
-      (d.exam.exams || []).forEach(function (x) { if ((x.name || '').toLowerCase().indexOf(q) >= 0) add('exam', '📚', x.name, '考试'); });
-      return out.slice(0, 40);
-    },
-
-    openSearch: function () {
-      var self = this;
-      var root = document.getElementById('modalRoot');
-      var el = document.createElement('div');
-      el.className = 'modal-mask';
-      el.innerHTML = '<div class="modal search-modal" role="dialog" aria-modal="true" aria-label="全局搜索与命令">' +
-        '<div class="search-bar"><input class="search-input" type="search" placeholder="搜索，或输入命令，如「记一笔」「设置」…" aria-label="搜索"><button class="x-btn tap" data-x aria-label="关闭">✕</button></div>' +
-        '<div class="search-results" id="searchResults"></div></div>';
-      root.appendChild(el);
-      if (w.UI && w.UI.modalA11y) w.UI.modalA11y.open(el);
-      var input = el.querySelector('.search-input');
-      var box = el.querySelector('#searchResults');
-      var items = [], active = 0;
-      setTimeout(function () { try { input.focus(); } catch (e) {} }, 60);
-
-      var COMMANDS = [
-        { key: '记一笔 记账 支出 收入', title: '记一笔', icon: '💰', mod: 'finance', act: 'fnew', sub: '快速记账' },
-        { key: '新建账户 账户', title: '新建记账账户', icon: '🏦', mod: 'finance', act: 'anew', sub: 'finance' },
-        { key: '新建任务 待办', title: '新建任务', icon: '📝', mod: 'tasks', act: 'new', sub: 'tasks' },
-        { key: '新建打卡 习惯', title: '新建打卡任务', icon: '✅', mod: 'checkin', act: 'newHabit', sub: 'checkin' },
-        { key: '添加愿望 愿望', title: '添加愿望', icon: '⭐', mod: 'wish', act: 'new', sub: 'wish' },
-        { key: '写日记 日记', title: '写日记', icon: '📔', mod: 'diary', act: 'new', sub: 'diary' },
-        { key: '设置 主题 外观 备份', title: '打开设置', icon: '⚙️', mod: 'settings', act: '', sub: 'settings' },
-        { key: '首页 总览', title: '回到首页总览', icon: '🏠', mod: 'home', act: '', sub: 'home' }
-      ];
-
-      function close() { el.remove(); if (w.UI && w.UI.modalA11y) w.UI.modalA11y.close(el); }
-      function runItem(it) {
-        close();
-        if (it.mod) self.go(it.mod);
-        if (it.act) {
-          var m = self.modules[it.mod];
-          if (m && m.acts && m.acts[it.act]) setTimeout(function () { m.acts[it.act](); }, 90);
-        }
-      }
-      function render(q) {
-        q = (q || '').trim();
-        items = [];
-        if (!q) {
-          items = COMMANDS.map(function (c) { return { cmd: true, icon: c.icon, title: c.title, sub: c.sub, mod: c.mod, act: c.act }; });
-        } else {
-          var ql = q.toLowerCase();
-          COMMANDS.forEach(function (c) { if ((c.key + c.title).toLowerCase().indexOf(ql) >= 0) items.push({ cmd: true, icon: c.icon, title: c.title, sub: c.sub, mod: c.mod, act: c.act }); });
-          self.globalSearch(q).forEach(function (r) { items.push({ cmd: false, icon: r.icon, title: r.title, sub: r.sub, mod: r.mod, modName: r.modName }); });
-        }
-        if (!items.length) { box.innerHTML = '<div class="search-empty">没有找到与「' + esc(q) + '」相关的内容或命令</div>'; return; }
-        active = 0;
-        box.innerHTML = items.map(function (it, i) {
-          return '<button class="search-res tap' + (i === 0 ? ' on' : '') + '" data-idx="' + i + '">' +
-            '<span class="sr-ico">' + it.icon + '</span>' +
-            '<span class="sr-main"><span class="sr-title">' + esc(it.title) + '</span>' +
-            (it.sub ? '<span class="sr-sub">' + esc(it.sub) + '</span>' : '') + '</span>' +
-            '<span class="sr-mod">' + (it.cmd ? '命令' : esc(it.modName || '')) + '</span></button>';
-        }).join('');
-      }
-      function setActive(i) {
-        if (!items.length) return;
-        active = (i + items.length) % items.length;
-        [].forEach.call(box.querySelectorAll('.search-res'), function (b, idx) { b.classList.toggle('on', idx === active); });
-        var on = box.querySelector('.search-res.on'); if (on) on.scrollIntoView({ block: 'nearest' });
-      }
-      input.addEventListener('input', function () { render(input.value); });
-      input.addEventListener('keydown', function (e) {
-        if (e.key === 'ArrowDown') { e.preventDefault(); setActive(active + 1); }
-        else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active - 1); }
-        else if (e.key === 'Enter') { e.preventDefault(); if (items[active]) runItem(items[active]); }
-      });
-      el.addEventListener('click', function (e) {
-        if (e.target === el || e.target.closest('[data-x]')) return close();
-        var r = e.target.closest('.search-res');
-        if (r) runItem(items[+r.dataset.idx]);
-      });
-      el.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
-      render('');
-    }
   };
 
   // 导航高亮修正

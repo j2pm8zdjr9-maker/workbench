@@ -240,20 +240,6 @@ a{ color:var(--olive-deep); text-decoration:none; }
 .search-res .sr-sub{ font-size:12.5px; color:var(--brown-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .search-res .sr-mod{ font-size:12px; color:var(--brown-4); flex:0 0 auto; }
 .search-res.on{ background:var(--olive-10); box-shadow:inset 3px 0 0 var(--olive); }
-
-/* 左滑手势动作区（仅触控设备启用，由 JS 加 .swipeable） */
-.item.swipeable{ position:relative; overflow:hidden; }
-.item.swipeable .item-inner{ position:relative; z-index:2; background:var(--card); width:100%; transition:transform .25s var(--ease), width .25s var(--ease); will-change:transform, width; overflow:hidden; }
-.item.swipeable.sw-drag .item-inner{ transition:none; }
-.item.swipeable .swipe-actions{ position:absolute; top:0; right:0; bottom:0; z-index:3; display:flex; }
-.item.swipeable .sw-btn{ border:0; color:#fff; font-size:14px; padding:0 22px; display:flex; align-items:center; }
-.item.swipeable .sw-btn.edit{ background:var(--olive); }
-.item.swipeable .sw-btn.del{ background:var(--danger); }
-@media (hover: none), (pointer: coarse){
-  .item.swipeable .item-ops{ display:none; }
-  .item.swipeable + .item-ops{ display:none; }
-}
-
 .scrim{
   position:fixed; inset:0; background:rgba(51,25,21,.34);
   opacity:0; pointer-events:none; transition:opacity .26s var(--ease); z-index:55;
@@ -480,6 +466,18 @@ a{ color:var(--olive-deep); text-decoration:none; }
 .item.done .item-title{ color:var(--brown-4); text-decoration:line-through; }
 .item.hl{ border-color:var(--olive-soft); background:var(--olive-05); }
 .item.alert{ border-color:rgba(201,128,58,.4); background:rgba(201,128,58,.05); }
+
+/* 通用展开/折叠（库存式）：默认只显示主信息，点击整项展开显示详情与操作 */
+.item.clickable{ cursor:pointer; }
+.item.clickable:active{ background:var(--olive-05); }
+.item .item-detail{ display:none; }
+.item.open{ border-color:var(--olive-24); background:var(--olive-05); }
+.item.open .item-detail{ display:block; animation:detailIn .18s ease; }
+@keyframes detailIn{ from{ opacity:0; transform:translateY(-4px); } to{ opacity:1; transform:none; } }
+.item-detail{ margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); }
+.item-detail > .item-ops{ margin-top:6px; }
+.item .caret{ display:inline-block; transition:transform .2s var(--ease); color:var(--brown-3); flex:0 0 auto; }
+.item.open .caret{ transform:rotate(90deg); }
 
 /* 分类管理弹窗 */
 .cat-manage-list{ display:flex; flex-direction:column; gap:4px; }
@@ -938,6 +936,19 @@ table.tbl td.ops{ white-space:nowrap; text-align:right; }
 .qbtn .qt{ font-size:13px; color:var(--brown); font-weight:600; }
 @media (max-width:420px){ .home-quick{ grid-template-columns:repeat(2,1fr); } }
 @media (max-width:380px){ .ov-grid{ grid-template-columns:repeat(2,1fr); } .ov-v{ font-size:17px; } }
+
+/* ============ 首页模块快速导航 ============ */
+.nav-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.nav-card{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  padding:14px 4px; border:1px solid var(--line); border-radius:14px; background:var(--card);
+  transition:transform .12s var(--ease), border-color .15s, background-color .15s;
+}
+.nav-card:active{ transform:scale(.96); }
+.nav-card .nc-ico{ font-size:24px; line-height:1; }
+.nav-card .nc-name{ font-size:12.5px; color:var(--brown); text-align:center; }
+@media (max-width:420px){ .nav-grid{ grid-template-columns:repeat(3,1fr); } }
+@media (max-width:380px){ .nav-grid{ grid-template-columns:repeat(3,1fr); } }
 
 /* ============ 首页概览小方块（紧凑、可跳转） ============ */
 .ov-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:7px; }

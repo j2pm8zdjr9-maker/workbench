@@ -59,7 +59,19 @@
         UI.card({ title: '⚡ 快速记一笔', body: '<div class="home-quick">' + QUICK.map(function (q) {
           return '<button class="qbtn tap" data-act="qnew" data-mod="' + q.mod + '" data-mact="' + q.act + '">' +
             '<span class="qi">' + q.i + '</span><span class="qt">' + q.t + '</span></button>';
-        }).join('') + '</div>' });
+        }).join('') + '</div>' }) +
+        this.modulesNav();
+    },
+
+    /* ---------- 模块快速导航：一览全部模块，点击直达 ---------- */
+    modulesNav: function () {
+      var ids = (App.order || []).filter(function (id) { return id !== 'home' && App.modules[id]; });
+      var cells = ids.map(function (id) {
+        var m = App.modules[id];
+        return '<button class="nav-card tap" data-act="goModule" data-id="' + id + '">' +
+          '<span class="nc-ico">' + m.icon + '</span><span class="nc-name">' + esc(m.name) + '</span></button>';
+      }).join('');
+      return UI.card({ title: '🧭 全部模块', body: '<div class="nav-grid">' + cells + '</div>' });
     },
 
     /* ---------- 概览方块（16 个，可点击跳转） ---------- */
@@ -238,6 +250,7 @@
         if (t.dataset.tk) App.setTab(goM, t.dataset.tk, t.dataset.tv);
         App.go(goM);
       },
+      goModule: function (t) { App.go(t.dataset.id); },
       go: function (t) { App.go(t.dataset.id); },
 
       // 记录读书时长：选择正在阅读（在读）的书，再记今日分钟数

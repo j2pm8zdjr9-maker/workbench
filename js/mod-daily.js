@@ -557,7 +557,7 @@
         '<span class="grow">' + esc(s.t) + '</span>' +
         '<button class="link-btn del tap" data-act="subdel" data-id="' + x.id + '|' + s.id + '">×</button></div>';
     }).join('') + '</div>' : '';
-    return '<div class="item' + (isDone ? ' done' : '') + ' open" data-act="texpand" data-id="' + x.id + '" data-sw-edit="edit" data-sw-del="del">' +
+    return '<div class="item' + (isDone ? ' done' : '') + ' open" data-act="texpand" data-id="' + x.id + '">' +
       UI.check(isDone, 'done', x.id) +
       '<div class="item-main">' + titleRow + meta +
       (x.desc ? '<div class="item-note">' + esc(x.desc) + '</div>' : '') +

@@ -71,20 +71,9 @@
       if (e.key === 'Escape') document.body.classList.remove('nav-open');
     });
 
-    // 全局搜索（顶栏按钮 / ⌘K · Ctrl+K）
-    var searchBtn = document.getElementById('searchBtn');
-    if (searchBtn) searchBtn.onclick = function () { App.openSearch(); };
-    window.addEventListener('keydown', function (e) {
-      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); App.openSearch(); }
-    });
-
     // 侧栏模块过滤
     var navSearch = document.getElementById('navSearch');
     if (navSearch) navSearch.addEventListener('input', function () { App.filterNav(navSearch.value); });
-    // 在侧栏聚焦时按「/」也可唤起全局搜索
-    if (navSearch) navSearch.addEventListener('keydown', function (e) {
-      if (e.key === '/') { e.preventDefault(); App.openSearch(); }
-    });
 
     // 存储不可用提示
     if (!Store.ok) U.toast('浏览器本地存储不可用，数据将无法保存');
