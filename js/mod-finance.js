@@ -183,7 +183,11 @@
         if (type && f.type !== type) return false;
         if (acc && f.acc !== acc && f.acc2 !== acc) return false;
         return true;
-      }).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id)); });
+      }).sort(function (a, b) {
+        return String(b.date).localeCompare(String(a.date)) ||
+          String(b.time || '00:00').localeCompare(String(a.time || '00:00')) ||
+          String(b.id).localeCompare(String(a.id));
+      });
 
       var inc = sumBy(arr.filter(function (f) { return f.type === 'in'; }), 'amount');
       var exp = sumBy(arr.filter(function (f) { return f.type === 'out'; }), 'amount');
@@ -464,7 +468,11 @@
           if ((f.cat || '') !== cat) return false;
           if (!TF.inRange('finance_stat', f.date)) return false;
           return true;
-        }).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id)); });
+        }).sort(function (a, b) {
+        return String(b.date).localeCompare(String(a.date)) ||
+          String(b.time || '00:00').localeCompare(String(a.time || '00:00')) ||
+          String(b.id).localeCompare(String(a.id));
+      });
         var el = UI.sheet('「' + cat + '」' + (io === 'out' ? '支出' : '收入') + '明细 · ' + arr.length + ' 笔',
           '<div id="finCatDetailList"></div>', '<button class="btn ghost tap" data-x>关闭</button>');
         var listEl = el.querySelector('#finCatDetailList');
@@ -522,7 +530,11 @@
             var hay = (f.type === 'transfer' ? (accName(f.acc) + ' ' + accName(f.acc2)) : (f.cat || '')) + ' ' + accName(f.acc) + ' ' + (f.note || '');
             return hay.toLowerCase().indexOf(q) >= 0;
           },
-          sort: function (a, b) { return String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(String(a.id)); },
+          sort: function (a, b) {
+            return String(b.date).localeCompare(String(a.date)) ||
+              String(b.time || '00:00').localeCompare(String(a.time || '00:00')) ||
+              String(b.id).localeCompare(String(a.id));
+          },
           extraBar: function (cur) {
             var io = '<div class="row" style="gap:8px;margin-bottom:4px">' +
               '<button class="btn sm ghost tap" data-act="finImport">📥 导入 xlsx</button>' +
