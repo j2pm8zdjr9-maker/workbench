@@ -51,14 +51,16 @@
     var sign = f.type === 'in' ? '+' : f.type === 'out' ? '-' : '';
     var color = f.type === 'in' ? '#6E8A28' : f.type === 'out' ? '#B4553F' : '#6E8A9B';
     var title = f.type === 'transfer' ? accName(f.acc) + ' → ' + accName(f.acc2) : (f.cat || '未分类');
-    var main = '<div class="row between" style="gap:10px"><span class="item-title">' + esc(title) + '</span>' +
-      '<span style="font-weight:700;color:' + color + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;margin-left:8px;" title="' + U.moneyFull(f.amount) + '">' + sign + money(f.amount) + '</span></div>';
-    var detail = '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + '</span>' +
+    var main = '<div class="row between" style="gap:10px;align-items:center"><span class="item-title">' + esc(title) + '</span>' +
+      '<div class="row" style="gap:12px;align-items:center;flex-shrink:0;margin-left:8px">' +
+      '<span style="font-weight:700;color:' + color + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + U.moneyFull(f.amount) + '">' + sign + money(f.amount) + '</span>' +
+      UI.ops(f.id, 'fedit', 'fdel') + '</div></div>';
+    var detail = '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + (f.time ? ' · ' + esc(f.time) : '') + '</span>' +
       (f.type !== 'transfer' ? '<span class="badge grey">' + esc(accName(f.acc)) + '</span>' : '<span class="badge info">转账</span>') +
-      (f.note ? '<span>' + esc(f.note) + '</span>' : '') + '</div>' + UI.ops(f.id, 'fedit', 'fdel');
-    return '<div class="item clickable" data-toggle data-id="' + esc(f.id) + '">' +
-      '<div class="item-main">' + main + '</div>' +
-      '<div class="item-detail">' + detail + '</div></div>';
+      '</div>' +
+      (f.note ? '<div class="item-meta"><span>' + esc(f.note) + '</span></div>' : '');
+    return '<div class="item" data-id="' + esc(f.id) + '">' +
+      '<div class="item-main">' + main + detail + '</div></div>';
   }
 
   function finCategories() {
@@ -97,7 +99,7 @@
     return '<div class="item"><div class="item-main">' +
       '<div class="row between" style="gap:10px"><span class="item-title">' + esc(f.note || accName(f.acc) || '未分类') + '</span>' +
       '<span style="font-weight:700;color:' + color + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;margin-left:8px;" title="' + U.moneyFull(f.amount) + '">' + sign + money(f.amount) + '</span></div>' +
-      '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + '</span>' +
+      '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + (f.time ? ' · ' + esc(f.time) : '') + '</span>' +
       '<span class="badge grey">' + esc(accName(f.acc)) + '</span>' +
       (f.cat ? '<span class="badge grey">' + esc(f.cat) + '</span>' : '') + '</div>' +
       '</div></div>';
@@ -355,11 +357,12 @@
         if (F().accounts.length < 2) { U.toast('至少需要两个账户才能转账'); return; }
         var opts = F().accounts.map(function (a) { return { v: a.id, t: a.name }; });
         UI.form({
-          title: '账户转账', values: { date: U.today() }, fields: [
+          title: '账户转账', values: { date: U.today(), time: U.nowTime() }, fields: [
             { k: 'acc', label: '转出账户', type: 'select', options: opts, req: true },
             { k: 'acc2', label: '转入账户', type: 'select', options: opts, req: true },
             { k: 'amount', label: '金额', type: 'number', min: 0, req: true, money: true },
             { k: 'date', label: '日期', type: 'date', req: true, def: U.today() },
+            { k: 'time', label: '时间', type: 'time', req: true, def: U.nowTime() },
             { k: 'note', label: '备注', full: true }
           ]
         }).then(function (v) {
@@ -393,6 +396,7 @@
               { k: 'acc2', label: '转入账户', type: 'select', options: opts, req: true },
               { k: 'amount', label: '金额', type: 'number', req: true },
               { k: 'date', label: '日期', type: 'date', req: true },
+              { k: 'time', label: '时间', type: 'time', req: true, def: U.nowTime() },
               { k: 'note', label: '备注', full: true }
             ]
           }).then(function (v) {
@@ -552,7 +556,7 @@
             return '<div class="item"><div class="item-main">' +
               '<div class="row between" style="gap:10px"><span class="item-title">' + esc(f.type === 'transfer' ? accName(f.acc) + ' → ' + accName(f.acc2) : (f.cat || '未分类')) + '</span>' +
               '<span style="font-weight:700;color:' + color + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;margin-left:8px;" title="' + U.moneyFull(f.amount) + '">' + sign + money(f.amount) + '</span></div>' +
-              '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + '</span>' +
+              '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + (f.time ? ' · ' + esc(f.time) : '') + '</span>' +
               (f.type !== 'transfer' ? '<span class="badge grey">' + esc(accName(f.acc)) + '</span>' : '<span class="badge info">转账</span>') +
               (f.note ? '<span>' + esc(f.note) + '</span>' : '') + '</div></div>' +
               UI.ops(f.id, null, 'hdel') + '</div>';
@@ -717,7 +721,7 @@
     if (typeof XLSX === 'undefined') { U.toast('表格库未加载'); return; }
     var rows1 = F().flows.filter(function (f) { return f.type === 'in' || f.type === 'out'; }).map(function (f) {
       return {
-        '日期': f.date, '时间': '00:00:00',
+        '日期': f.date, '时间': (f.time || '00:00:00') + (f.time && f.time.length === 5 ? ':00' : ''),
         '类型': f.type === 'in' ? '收入' : '支出',
         '金额': Math.abs(num(f.amount)),
         '一级分类': f.cat || '', '二级分类': '', '标签': '',
@@ -728,10 +732,14 @@
     });
     var rows2 = [];
     F().flows.filter(function (f) { return f.type === 'transfer'; }).forEach(function (f) {
-      rows2.push({ '日期': f.date, '时间': '00:00:00', '类型': '账户互转', '金额': Math.abs(num(f.amount)), '转入账户': accName(f.acc2), '转出账户': accName(f.acc), '备注': f.note || '' });
+      var tm = f.time || '00:00:00';
+      if (f.time && f.time.length === 5) tm += ':00';
+      rows2.push({ '日期': f.date, '时间': tm, '类型': '账户互转', '金额': Math.abs(num(f.amount)), '转入账户': accName(f.acc2), '转出账户': accName(f.acc), '备注': f.note || '' });
     });
     F().flows.filter(function (f) { return f.cat === '余额调整'; }).forEach(function (f) {
-      rows2.push({ '日期': f.date, '时间': '00:00:00', '类型': '余额调整', '金额': (f.type === 'in' ? '' : '-') + Math.abs(num(f.amount)), '转入账户': f.type === 'in' ? accName(f.acc) : '', '转出账户': f.type === 'out' ? accName(f.acc) : '', '备注': f.note || '' });
+      var tm = f.time || '00:00:00';
+      if (f.time && f.time.length === 5) tm += ':00';
+      rows2.push({ '日期': f.date, '时间': tm, '类型': '余额调整', '金额': (f.type === 'in' ? '' : '-') + Math.abs(num(f.amount)), '转入账户': f.type === 'in' ? accName(f.acc) : '', '转出账户': f.type === 'out' ? accName(f.acc) : '', '备注': f.note || '' });
     });
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows1), '收支账单');
@@ -757,6 +765,7 @@
       { k: 'amount', label: '金额', type: 'number', min: 0, req: true, money: true },
       { k: 'acc', label: '账户', type: 'select', req: true, options: F().accounts.map(function (a) { return { v: a.id, t: a.name }; }) },
       { k: 'date', label: '日期', type: 'date', req: true, def: U.today() },
+      { k: 'time', label: '时间', type: 'time', req: true, def: U.nowTime() },
       { k: 'cat', label: '分类', type: 'select', ph: '请选择', depends: ['type'], options: function (all) { return all.type === 'in' ? F().catIncome : F().catExpense; } },
       { k: 'newcat', label: '或新增分类', ph: '填了会自动加入分类库' },
       { k: 'note', label: '备注', type: 'textarea', rows: 3 }
