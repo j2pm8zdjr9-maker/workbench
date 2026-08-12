@@ -378,6 +378,7 @@
       });
       if (mod.mount) mod.mount(view);
       this.bindView(view, mod);
+      w.U.foldNotes(view);
     },
 
     // 局部重绘（保持滚动位置）
@@ -594,10 +595,27 @@
   w.Store = Store;
   w.App = App;
   w.Water = Water;
+
+  /* 备注自动折叠：把渲染出的 .item-note 包进原生 <details>，默认收起、点击展开、内容满宽。
+     在 App.paint、弹窗(sheet)、历史列表重渲染后统一调用，一处覆盖所有模块。 */
+  function foldNotes(root) {
+    if (!root || !root.querySelectorAll) return;
+    var ns = root.querySelectorAll('.item-note:not([data-folded])');
+    [].forEach.call(ns, function (n) {
+      if (!n.textContent.trim()) return;
+      n.setAttribute('data-folded', '1');
+      var d = document.createElement('details');
+      d.className = 'note-fold';
+      d.innerHTML = '<summary class="note-sum">📝 备注</summary>';
+      n.parentNode.insertBefore(d, n);
+      d.appendChild(n);
+    });
+  }
+
   w.U = {
     uid: uid, today: today, nowTime: nowTime, pad: pad, shiftDay: shiftDay, parseDate: parseDate,
     fmtDate: fmtDate, dayDiff: dayDiff, relDay: relDay, esc: esc, num: num, money: money, moneyFull: moneyFull,
-    ym: ym, yr: yr, sortBy: sortBy, toast: toast
+    ym: ym, yr: yr, sortBy: sortBy, toast: toast, foldNotes: foldNotes
   };
 
   /* ---------- 一键置顶悬浮按钮（每个界面右下角，下滑后出现） ---------- */

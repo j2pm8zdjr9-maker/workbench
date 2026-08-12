@@ -637,7 +637,7 @@
 
     render: function () {
       var st = taskSt();
-      var tag = App.tab('tasks', 'tag', '');
+      var tag = Cats.sel('taskTags');
       var all = D().tasks;
       var overdue = all.filter(function (x) { return x.due && x.status !== 'done' && U.dayDiff(U.today(), x.due) < 0; }).length;
       var todayN = all.filter(function (x) { return x.due === U.today() && x.status !== 'done'; }).length;
@@ -660,7 +660,7 @@
               { k: 'done', t: '已完成' }, { k: 'all', t: '全部' }
             ], st, 'st') +
             '<div style="height:14px"></div>' +
-            Cats.filterBar('taskTags', tag, { label: '标签' }) +
+            Cats.filterBar('taskTags', { label: '标签' }) +
             '<div id="tlist">' + this.list() + '</div>'
         }) + this.calCard();
     },
@@ -696,7 +696,7 @@
     },
 
     list: function () {
-      var st = taskSt(), tag = App.tab('tasks', 'tag', '');
+      var st = taskSt(), tag = Cats.sel('taskTags');
       var day = tCur.day;
       var arr = tasksForDay(day).filter(function (x) {
         if (st === 'done') {
@@ -704,7 +704,7 @@
         } else if (st !== 'all') {
           if (x.status !== st) return false;
         }
-        if (tag && x.tag !== tag) return false;
+        if (tag.length && tag.indexOf(x.tag) < 0) return false;
         return true;
       });
       var od = { high: 0, mid: 1, low: 2 };
@@ -750,9 +750,20 @@
             if (!val || val === 'open') return true;   // 'open' 为旧值，等同全部
             return x.status === val;
           },
-          extraBar2: function (cur) { return Cats.filterBar('taskTags', cur, { label: '标签' }); },
-          extraMatch2: function (x, val) { return !val || x.tag === val; },
-          extraNs2: 'taskTags',
+          extraBar2: function (cur) {
+            var sel = String(cur || '').split(',').filter(Boolean);
+            var all = Cats.get('taskTags');
+            return '<div class="row" style="gap:8px;flex-wrap:wrap;margin:0 0 4px">' +
+              '<span class="small muted">标签</span>' +
+              '<button class="pill tap' + (sel.length === 0 ? ' on' : '') + '" data-act="histFilter" data-multi="1" data-k="*">全部</button>' +
+              all.map(function (c) {
+                return '<button class="pill tap' + (sel.indexOf(c) >= 0 ? ' on' : '') + '" data-act="histFilter" data-multi="1" data-k="' + U.esc(c) + '">' + U.esc(c) + '</button>';
+              }).join('') + '</div>';
+          },
+          extraMatch2: function (x, val) {
+            var s = String(val || '').split(',').filter(Boolean);
+            return !s.length || s.indexOf(x.tag) >= 0;
+          },
           render: function (x) {
             var isDone = x.status === 'done';
             return '<div class="item' + (isDone ? ' done' : '') + '">' +
@@ -854,8 +865,8 @@
       }
     }
   };
-  /* 任务标签筛选：灵活胶囊回调（全部/固定/更多 复用全局 catPick 委托） */
-  Cats.setPicker('taskTags', function (k) { App.setTab('tasks', 'tag', k); ListPager.resetPg('tasks:list'); App.refresh(); });
+  /* 任务标签筛选：多选回调（全部/固定/更多 复用全局 catPick 委托） */
+  Cats.setPicker('taskTags', function () { ListPager.resetPg('tasks:list'); App.refresh(); });
 
   App.register(tasks);
 
@@ -864,6 +875,7 @@
   ========================================================= */
   var wState = { q: '', cat: '' };
   var wCur = { day: U.today() };   // 工作留痕当前查看的日期
+  var wfMore = false;              // 历史记录分类筛选「更多」展开态
   function wDayNav() {
     var d = wCur.day, isToday = d === U.today();
     return '<div class="row between" style="margin-bottom:14px">' +
@@ -918,7 +930,7 @@
       var mTot = mArr.reduce(function (s, x) { return s + num(x.mins); }, 0);
       var w0 = U.shiftDay(U.today(), -6);
       var wTot = all.filter(function (x) { return x.date >= w0; }).reduce(function (s, x) { return s + num(x.mins); }, 0);
-      var todayArr = this.todayArr();
+      var todayArr = this.wFilteredToday();
       var dayTot = todayArr.reduce(function (s, x) { return s + num(x.mins); }, 0);
       var isToday = wCur.day === U.today();
 
@@ -929,7 +941,7 @@
           right: Cats.btn('workCats', '工作分类') +
             '<button class="btn ghost sm tap" data-act="hist">📜 历史记录</button>' +
             '<button class="btn primary sm tap" data-act="new">+ 记一笔</button>',
-          body: wDayNav() + (todayArr.length ? this.list() : UI.empty(isToday ? '今天还没有工作记录，点「记一笔」开始' : '这一天还没有工作记录，点「记一笔」开始', '📝'))
+          body: wDayNav() + Cats.filterBar('workCats', { label: '分类' }) + (todayArr.length ? this.list() : UI.empty(isToday ? '今天还没有工作记录，点「记一笔」开始' : '这一天还没有工作记录，点「记一笔」开始', '📝'))
         }) +
         (todayArr.length ? UI.card({ title: (isToday ? '今日' : '当天') + '分类时长占比', body: this.catStat() }) : '') +
         Cal.card({
@@ -959,8 +971,37 @@
         .sort(function (a, b) { return (b.start || '').localeCompare(a.start || ''); });
     },
 
+    /* 当天记录按当前选中的分类（多选）过滤 */
+    wFilteredToday: function () {
+      var arr = this.todayArr();
+      var wsel = Cats.sel('workCats');
+      if (wsel.length) arr = arr.filter(function (x) { return wsel.indexOf(x.cat) >= 0; });
+      return arr;
+    },
+
     openHist: function () {
-      Hist.open({
+      var self = this;
+      function workHistExtra(cur) {
+        var sel = String(cur || '').split(',').filter(Boolean);
+        var all = Cats.get('workCats');
+        var catPin = Cats.pin('workCats');
+        var fixedN = Math.max(0, catPin - 1);
+        var pinned = all.slice(0, fixedN), rest = all.slice(fixedN);
+        var html = '<button class="pill tap' + (sel.length === 0 ? ' on' : '') + '" data-act="histFilter" data-multi="1" data-k="*">全部分类</button>';
+        pinned.forEach(function (c) {
+          html += '<button class="pill tap' + (sel.indexOf(c) >= 0 ? ' on' : '') + '" data-act="histFilter" data-multi="1" data-k="' + U.esc(c) + '">' + U.esc(c) + '</button>';
+        });
+        if (rest.length) {
+          if (wfMore) {
+            html += rest.map(function (c) {
+              return '<button class="pill tap' + (sel.indexOf(c) >= 0 ? ' on' : '') + '" data-act="histFilter" data-multi="1" data-k="' + U.esc(c) + '">' + U.esc(c) + '</button>';
+            }).join('');
+          }
+          html += '<button class="pill tap' + (wfMore ? ' on' : '') + '" data-act="wfmore">更多 ▾</button>';
+        }
+        return '<div class="row" style="gap:8px;flex-wrap:wrap;margin:0 0 4px">' + html + '</div>';
+      }
+      var sheet = Hist.open({
         modId: 'worklog',
         title: '📝 工作留痕历史记录',
         searchPh: '🔍 搜内容 / 分类 / 日期 / 时间段（如 2026-08-09、09:30）',
@@ -973,10 +1014,11 @@
         },
         sort: function (a, b) { return (b.date + (b.start || '')).localeCompare(a.date + (a.start || '')); },
         empty: '该时间段内没有工作记录',
-        extraBar: function (cur) {
-          return UI.pills([{ k: '', t: '全部分类' }].concat(Cats.get('workCats').map(function (c) { return { k: c, t: c }; })), cur, 'histFilter');
+        extraBar: workHistExtra,
+        extraMatch: function (x, val) {
+          var s = String(val || '').split(',').filter(Boolean);
+          return !s.length || s.indexOf(x.cat) >= 0;
         },
-        extraMatch: function (x, val) { return !val || x.cat === val; },
         summary: function (arr) {
           var tot = arr.reduce(function (s, x) { return s + num(x.mins); }, 0);
           return UI.stats([['记录条数', arr.length, true], ['总时长', hm(tot)]]);
@@ -1003,10 +1045,19 @@
           }
         }
       });
+      /* 历史记录分类筛选「更多」展开/收起：切换 wfMore 并重渲染筛选条 */
+      sheet.addEventListener('click', function (e) {
+        var t = e.target.closest('[data-act="wfmore"]');
+        if (!t) return;
+        e.preventDefault();
+        wfMore = !wfMore;
+        var extraEl = sheet.querySelector('#histExtra-worklog');
+        if (extraEl) extraEl.innerHTML = workHistExtra(Store ? Hist.getFilter('worklog') : '');
+      });
     },
 
     list: function () {
-      var arr = this.todayArr();
+      var arr = this.wFilteredToday();
       if (!arr.length) return UI.empty('今天还没有工作记录', '📝');
       var dayMin = arr.reduce(function (s, a) { return s + num(a.mins); }, 0);
       var pageRows = ListPager.slice('worklog:list', arr);
@@ -1028,7 +1079,7 @@
 
     catStat: function () {
       var map = {};
-      this.todayArr().forEach(function (x) { map[x.cat || '未分类'] = (map[x.cat || '未分类'] || 0) + num(x.mins); });
+      this.wFilteredToday().forEach(function (x) { map[x.cat || '未分类'] = (map[x.cat || '未分类'] || 0) + num(x.mins); });
       var rows = Object.keys(map).map(function (k) { return { t: k, v: map[k] }; })
         .filter(function (r) { return r.v > 0; }).sort(function (a, b) { return b.v - a.v; });
       return UI.hbars(rows, 0, function (v) { return hm(v); });
@@ -1074,6 +1125,8 @@
       calDay: function (t) { Cal.act(t); }
     }
   };
+  /* 工作分类筛选：多选回调（全部/固定/更多 复用全局 catPick 委托） */
+  Cats.setPicker('workCats', function () { ListPager.resetPg('worklog:list'); App.refresh(); });
   App.register(worklog);
 
 })();

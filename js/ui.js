@@ -343,6 +343,10 @@
                 return '<button type="button" class="chip ghost tap" data-dq="' + esc(f.k) + '::' + q[1] + '">' + esc(q[0]) + '</button>';
               }).join('') + '</div>';
             }
+            if (f.type === 'date' && f.clearable) {
+              inner = '<span class="date-clearable">' + inner +
+                '<button type="button" class="field-clear tap" data-clr="' + esc(f.k) + '" aria-label="清除日期" title="清除（设为未选择 / 进行中）">✕</button></span>';
+            }
           }
           return '<div class="' + cls + '"' + whenAttr + '>' + (f.type === 'checkbox' ? '' : '<label>' + esc(f.label) + (f.req ? ' <span class="req-star">*</span>' : '') + '</label>') + inner +
             (f.hint ? '<span class="small muted">' + esc(f.hint) + '</span>' : '') +
@@ -476,6 +480,13 @@
             if (di) { di.value = d[1]; di.dispatchEvent(new Event('input')); di.dispatchEvent(new Event('change')); }
             return;
           }
+          var clr = e.target.closest('[data-clr]');
+          if (clr) {
+            e.preventDefault();
+            var ci = el.querySelector('[name="' + clr.dataset.clr + '"]');
+            if (ci) { ci.value = ''; ci.dispatchEvent(new Event('input')); ci.dispatchEvent(new Event('change')); }
+            return;
+          }
           if (e.target.closest('[data-ok]')) {
             var out = {}, bad = null, firstErr = null;
             fields.forEach(function (f) {
@@ -542,6 +553,7 @@
       root.appendChild(el);
       modalA11y.open(el);
       UI.lock();
+      w.U.foldNotes(el);
       el.addEventListener('click', function (e) {
         if (e.target === el || e.target.closest('[data-x]')) { el.remove(); UI.unlock(); modalA11y.close(el); }
       });

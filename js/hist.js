@@ -159,6 +159,7 @@
         ? '<div class="list">' + pageArr.map(cfg.render).join('') + '</div>'
         : UI.empty(cfg.empty || '该时间段内没有匹配的记录', '🔍');
       if (pagerEl) pagerEl.innerHTML = pagerHTML(total, pages, pg);
+      w.U.foldNotes(listEl);
     }
 
     renderTf();

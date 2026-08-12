@@ -5,6 +5,13 @@
   var D = function () { return Store.data; };
 
   var Cats = {
+    /* 多选状态：ns -> 已选分类名数组（空数组 = 全部） */
+    _sel: {},
+    sel: function (ns) { return Cats._sel[ns] || (Cats._sel[ns] = []); },
+    has: function (ns, c) { return Cats.sel(ns).indexOf(c) >= 0; },
+    toggle: function (ns, c) { var s = Cats.sel(ns); var i = s.indexOf(c); if (i >= 0) s.splice(i, 1); else s.push(c); return s; },
+    clear: function (ns) { Cats._sel[ns] = []; },
+
     /* 读取某命名空间下的分类列表（副本） */
     get: function (ns) { return (D()[ns] || []).slice(); },
 
@@ -103,61 +110,64 @@
       Store.save();
     },
 
-    /* ---------- 筛选条（首页/列表通用，节省屏幕空间） ----------
-       规则：「全部」固定显示；除「全部」外，同一行直接显示 catPin 个胶囊。
-       其中最后一个（第 catPin 个）是「灵活胶囊」：默认显示「更多 ▾」，点击后
-       打开选择器可选「无分类」（取消筛选）或剩余分类；选中后该胶囊名称变为该分类名。
-       再次点击灵活胶囊可重新选择其他分类，或选「无分类」取消筛选。
-       分类管理里可调整顺序，常用分类排到前面即可直接显示为固定胶囊。 */
-    _onPick: {},                 // ns -> function(k)
+    /* ---------- 筛选条（首页/列表通用，多选） ----------
+       多选规则：「全部」固定显示（点击清空）；其余分类以药丸形式展示，点击切换选中。
+       除「全部」外同一行直接显示 catPin-1 个固定分类（catPin 由分类管理控制，
+       可统一作用于主视图与历史记录）；最后一个为「更多 ▾」胶囊，点击打开全部分类
+       的多选选择器。被选中的非固定分类会在「更多」上以计数提示。
+       分类管理里可调整顺序与显示个数，常用分类排前面即直接显示为固定药丸。 */
+    _onPick: {},                 // ns -> function(selArray)
     setPicker: function (ns, fn) { Cats._onPick[ns] = fn; },
-    pick: function (ns, k) { if (Cats._onPick[ns]) Cats._onPick[ns](k); },
+    pick: function (ns, k) {
+      if (k === '*') Cats.clear(ns);
+      else Cats.toggle(ns, k);
+      if (Cats._onPick[ns]) Cats._onPick[ns](Cats.sel(ns));
+    },
 
-    /* 渲染筛选条。cur：当前选中的分类（'' = 全部）。opts.label：左侧小标题。
-       catPin 表示「除全部外直接显示的胶囊数量」，默认 3（= 2 固定 + 1 灵活）。 */
-    filterBar: function (ns, cur, opts) {
+    /* 渲染多选筛选条。opts.label：左侧小标题。catPin 控制除「全部」外直接显示的分类数。 */
+    filterBar: function (ns, opts) {
       opts = opts || {};
       var all = Cats.get(ns);
+      var sel = Cats.sel(ns);
       var catPin = opts.pin || Cats.pin(ns);
-      var fixedN = Math.max(0, catPin - 1);          // 固定分类数
+      var fixedN = Math.max(0, catPin - 1);          // 固定分类数（其余收进「更多」）
       var pinned = all.slice(0, fixedN);
       var rest = all.slice(fixedN);
-      var html = '<button class="pill tap' + (cur === '' ? ' on' : '') + '" data-act="catPick" data-ns="' + ns + '" data-k="">全部</button>';
+      var html = '<button class="pill tap' + (sel.length === 0 ? ' on' : '') + '" data-act="catPick" data-ns="' + ns + '" data-k="*">全部</button>';
       pinned.forEach(function (c) {
-        html += '<button class="pill tap' + (cur === c ? ' on' : '') + '" data-act="catPick" data-ns="' + ns + '" data-k="' + U.esc(c) + '">' + U.esc(c) + '</button>';
+        html += '<button class="pill tap' + (Cats.has(ns, c) ? ' on' : '') + '" data-act="catPick" data-ns="' + ns + '" data-k="' + U.esc(c) + '">' + U.esc(c) + '</button>';
       });
-      var flexOn = cur && rest.indexOf(cur) >= 0;
-      var flexLabel = flexOn ? cur : '更多 ▾';
-      html += '<button class="pill tap' + (flexOn ? ' on' : '') + '" data-act="catMore" data-ns="' + ns + '" data-cur="' + U.esc(cur || '') + '">' + U.esc(flexLabel) + '</button>';
-      return '<div class="row cat-filter-row" style="gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px">' +
+      var restSel = sel.filter(function (c) { return rest.indexOf(c) >= 0; });
+      var flexLabel = restSel.length ? ('更多(' + restSel.length + ')') : '更多 ▾';
+      html += '<button class="pill tap' + (restSel.length ? ' on' : '') + '" data-act="catMore" data-ns="' + ns + '" data-cur="' + U.esc(sel.join(',')) + '">' + U.esc(flexLabel) + '</button>';
+      return '<div class="row cat-filter-row" style="gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 8px">' +
         (opts.label ? '<span class="small muted">' + U.esc(opts.label) + '</span>' : '') + html + '</div>';
     },
 
-    /* 打开「剩余分类」选择器（固定分类之后的剩余分类 + 无分类）。
-       onPick 可选；不传时走 setPicker 注册的回调（主视图场景）。 */
+    /* 打开「全部分类」多选选择器（点击切换，✓ 标记，完成后关闭）。
+       不传 onPick 时走 setPicker 注册的回调（主视图场景）。 */
     openPicker: function (ns, cur, onPick) {
-      var catPin = Cats.pin(ns);
-      var rest = Cats.get(ns).slice(Math.max(0, catPin - 1));
       var cb = onPick || Cats._onPick[ns];
-      var render = function () {
-        var pills = '<button class="pill tap' + (cur === '' ? ' on' : '') + '" data-act="catPick" data-ns="' + ns + '" data-k="">无分类</button>';
-        if (rest.length) {
-          pills += rest.map(function (c) {
-            return '<button class="pill tap' + (cur === c ? ' on' : '') + '" data-act="catPick" data-ns="' + ns + '" data-k="' + U.esc(c) + '">' + U.esc(c) + '</button>';
-          }).join('');
-        } else {
-          pills += '<span class="small muted" style="margin-left:8px">没有更多分类，去「分类管理」新增后会显示在这里</span>';
-        }
+      function render() {
+        var pills = '<button class="pill tap' + (Cats.sel(ns).length === 0 ? ' on' : '') + '" data-act="catPick" data-ns="' + ns + '" data-k="*">无分类 / 全部</button>';
+        pills += Cats.get(ns).map(function (c) {
+          var on = Cats.has(ns, c);
+          return '<button class="pill tap' + (on ? ' on' : '') + '" data-act="catPick" data-ns="' + ns + '" data-k="' + U.esc(c) + '">' + (on ? '✓ ' : '') + U.esc(c) + '</button>';
+        }).join('');
         return '<div class="row" style="gap:8px;flex-wrap:wrap">' + pills + '</div>';
-      };
-      var el = UI.sheet('选择分类', render(), '<button class="btn ghost tap" data-x>关闭</button>');
+      }
+      var foot = '<div style="height:12px"></div><button class="btn primary tap" data-done style="width:100%">完成</button><div style="height:6px"></div><button class="btn ghost tap" data-x>关闭</button>';
+      var el = UI.sheet('选择分类（可多选）', render(), foot);
       el.addEventListener('click', function (e) {
         var b = e.target.closest('[data-act="catPick"]');
-        if (!b) return;
-        e.preventDefault();
-        var k = b.dataset.k;
-        el.remove(); UI.unlock();
-        if (cb) cb(k);
+        if (b) {
+          e.preventDefault();
+          Cats.pick(ns, b.dataset.k);                 // 切换选中并触发主视图刷新
+          var body = el.querySelector('.modal-body');
+          if (body) body.innerHTML = render() + foot; // 选择器内即时刷新
+          return;
+        }
+        if (e.target.closest('[data-done]') || e.target.closest('[data-x]')) { el.remove(); UI.unlock(); }
       });
     },
 
