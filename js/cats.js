@@ -165,10 +165,14 @@
           e.preventDefault();
           Cats.pick(ns, b.dataset.k);                 // 切换选中并触发主视图刷新
           var body = el.querySelector('.modal-body');
-          if (body) body.innerHTML = render() + foot; // 选择器内即时刷新
+          if (body) body.innerHTML = render();        // 仅刷新选择区，底部按钮保持在 modal-foot
           return;
         }
-        if (e.target.closest('[data-done]') || e.target.closest('[data-x]')) { el.remove(); UI.unlock(); }
+        if (e.target.closest('[data-done]') || e.target.closest('[data-x]')) {
+          el.remove();
+          UI.unlock();
+          if (UI.modalA11y) UI.modalA11y.close(el);   // 还原 .app 可交互（避免界面卡死）
+        }
       });
     },
 

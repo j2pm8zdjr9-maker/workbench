@@ -608,19 +608,39 @@
   w.App = App;
   w.Water = Water;
 
-  /* 备注自动折叠：把渲染出的 .item-note 包进原生 <details>，默认收起、点击展开、内容满宽。
+  /* 整条折叠：凡是「带备注」的卡片（.item 内含 .item-note / .note-text / .study-content / .item-note-line）
+     整体包成原生 <details>，默认收起只显示标题行，展开才看到备注与完整信息，
+     避免一条长备注把整张卡片撑得过高、影响列表浏览。
      在 App.paint、弹窗(sheet)、历史列表重渲染后统一调用，一处覆盖所有模块。 */
   function foldNotes(root) {
     if (!root || !root.querySelectorAll) return;
-    var ns = root.querySelectorAll('.item-note:not([data-folded])');
-    [].forEach.call(ns, function (n) {
-      if (!n.textContent.trim()) return;
-      n.setAttribute('data-folded', '1');
+    var items = root.querySelectorAll('.item:not([data-folded])');
+    [].forEach.call(items, function (it) {
+      var note = it.querySelector('.item-note, .note-text, .study-content, .item-note-line');
+      if (!note || !note.textContent.trim()) return;            // 只有带备注才折叠整条
+      it.setAttribute('data-folded', '1');
       var d = document.createElement('details');
-      d.className = 'note-fold';
-      d.innerHTML = '<summary class="note-sum">📝 备注</summary>';
-      n.parentNode.insertBefore(d, n);
-      d.appendChild(n);
+      d.className = 'item-fold';
+      var sum = document.createElement('summary');
+      sum.className = 'item-fold-sum';
+      // 标题：优先 .item-title，否则取「去掉备注后」的首段文本
+      var titleEl = it.querySelector('.item-title');
+      var head = titleEl ? titleEl.textContent.trim() : '';
+      if (!head) {
+        var src = it.querySelector('.item-main') || it;
+        var tmp = src.cloneNode(true);
+        var nn = tmp.querySelector('.item-note, .note-text, .study-content, .item-note-line');
+        if (nn) nn.parentNode.removeChild(nn);
+        head = (tmp.textContent || '').replace(/\s+/g, ' ').trim();
+      }
+      if (!head) head = '备注';
+      if (head.length > 48) head = head.slice(0, 48) + '…';
+      sum.innerHTML = '<span class="item-fold-title">' + esc(head) + '</span>' +
+        '<span class="note-flag" title="含备注，点击展开">📝</span>' +
+        '<span class="fold-caret">▸</span>';
+      it.parentNode.insertBefore(d, it);
+      d.appendChild(sum);                                        // 先放摘要（标题行）
+      d.appendChild(it);                                          // 原卡片整体作为折叠正文
     });
   }
 

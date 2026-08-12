@@ -252,7 +252,7 @@
       return UI.card({
         title: '📅 年度归档', sub: '点击「查看」浏览该年完结作品',
         body: UI.pills(apills, aType, 'archType') + '<div style="height:10px"></div>' +
-          '<details class="note-fold" open><summary class="note-sum">📅 各年度归档（点击' + (aType === 'all' ? '收起' : '展开') + '）</summary>' +
+          '<details class="yr-archive" open><summary class="yr-archive-sum">📅 各年度归档（点击' + (aType === 'all' ? '收起' : '展开') + '）</summary>' +
           years.map(function (y) {
             var l = map[y], sc = l.filter(function (x) { return x.score !== '' && x.score !== undefined; });
             var av = sc.length ? (sc.reduce(function (s, x) { return s + num(x.score); }, 0) / sc.length).toFixed(1) : '—';

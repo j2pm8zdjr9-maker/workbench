@@ -82,6 +82,14 @@
         if (this.prevFocus && this.prevFocus.focus) { try { this.prevFocus.focus(); } catch (e) {} }
         this.prevFocus = null;
       }
+    },
+    /* 兜底：清空整个栈并恢复 .app 可交互。用于个别弹窗被直接移除、但 a11y 栈未正确关闭，
+       导致 .app 残留 inert 而界面「卡死」的场景（如分类多选选择器点「完成」）。 */
+    closeAll: function () {
+      this.stack = [];
+      var app = document.querySelector('.app');
+      if (app) { app.removeAttribute('aria-hidden'); app.removeAttribute('inert'); }
+      this.prevFocus = null;
     }
   };
 
@@ -575,7 +583,10 @@
     /* 滚动锁定/解锁（弹窗套弹窗安全） */
     lock: function () { document.body.style.overflow = 'hidden'; },
     unlock: function () {
-      if (!document.querySelector('.modal-mask, .di-lightbox')) document.body.style.overflow = '';
+      if (!document.querySelector('.modal-mask, .di-lightbox')) {
+        document.body.style.overflow = '';
+        if (modalA11y && modalA11y.closeAll) modalA11y.closeAll(); // 兜底：无可见弹窗时恢复 .app 可交互
+      }
     },
 
     /* 全局字体大小：写入 --font-scale（html 的 zoom 会整体缩放，含弹窗）。

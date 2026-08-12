@@ -480,17 +480,30 @@ a{ color:var(--olive-deep); text-decoration:none; }
 .item .item-note,
 .item .note-text{ font-size:13px; line-height:1.45; color:var(--brown-2); white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; max-width:100%; }
 .item .note-text{ margin-top:4px; }
-/* 备注折叠（原生 <details> 包裹，默认收起、点击展开、内容满宽） */
-.note-fold{ margin-top:6px; }
-.note-sum{ cursor:pointer; font-size:12.5px; color:var(--brown-3); list-style:none; padding:3px 0; user-select:none; -webkit-user-select:none; }
-.note-sum::-webkit-details-marker{ display:none; }
-.note-sum::before{ content:'▸'; display:inline-block; margin-right:6px; font-size:10px; opacity:.8; transition:transform .15s var(--ease); }
-.note-fold[open] .note-sum{ color:var(--brown-4); }
-.note-fold[open] .note-sum::before{ transform:translateY(1px) rotate(90deg); }
-.note-fold > .item-note{ margin-top:4px; }
-/* 学习记录「学了什么」：展开后内容过长时限制高度、内部滚动，避免把整页拉得过长 */
-.note-fold > .study-content{ max-height:170px; overflow:auto; -webkit-overflow-scrolling:touch; }
-.note-fold[open] > .study-content{ margin-top:4px; }
+/* 整条折叠：带备注的卡片默认收起，只显示标题行；点击展开看备注与完整信息。
+   原生 <details> 实现，summary 即「标题行」，原 .item 整体作为折叠正文。 */
+.item-fold{ margin-top:6px; }
+.item-fold > .item{ margin-top:0; }
+/* 收起时强制隐藏正文卡片（防止 .item 的 display 覆盖原生 details 隐藏规则） */
+.item-fold:not([open]) > .item{ display:none; }
+.item-fold-sum{ cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px; padding:11px 2px; user-select:none; -webkit-user-select:none; }
+.item-fold-sum::-webkit-details-marker{ display:none; }
+.item-fold-title{ flex:1 1 auto; min-width:0; font-size:14px; font-weight:600; color:var(--brown-4); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.note-flag{ flex:0 0 auto; font-size:12px; opacity:.85; }
+.fold-caret{ flex:0 0 auto; font-size:11px; color:var(--brown-3); transition:transform .15s var(--ease); }
+.item-fold[open] > .item-fold-sum .fold-caret{ transform:rotate(90deg); }
+.item-fold[open] > .item-fold-sum{ border-bottom:1px solid var(--line); margin-bottom:2px; }
+/* 展开后备注过长时限制高度、内部滚动，避免把整页拉得过长 */
+.item-fold[open] > .item .item-note,
+.item-fold[open] > .item .note-text,
+.item-fold[open] > .item .study-content,
+.item-fold[open] > .item .item-note-line{ max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; }
+/* 影剧书·年度归档折叠（独立用途，非备注折叠） */
+.yr-archive{ margin-top:8px; }
+.yr-archive-sum{ cursor:pointer; list-style:none; font-size:13px; font-weight:600; color:var(--brown-4); padding:6px 0; user-select:none; -webkit-user-select:none; }
+.yr-archive-sum::-webkit-details-marker{ display:none; }
+.yr-archive-sum::before{ content:'▸'; display:inline-block; margin-right:6px; font-size:10px; opacity:.8; transition:transform .15s var(--ease); }
+.yr-archive[open] > .yr-archive-sum::before{ transform:translateY(1px) rotate(90deg); }
 .item .item-ops{ display:flex; gap:2px; flex:0 0 auto; align-items:center; }
 .item.done .item-title{ color:var(--brown-4); text-decoration:line-through; }
 .item.hl{ border-color:var(--olive-soft); background:var(--olive-05); }
