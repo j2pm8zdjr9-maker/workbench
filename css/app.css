@@ -396,11 +396,11 @@ a{ color:var(--olive-deep); text-decoration:none; }
 
 /* 表单：左标签 + 右内容（无边框账单详情风格，字号统一） */
 .form-grid{ display:flex; flex-direction:column; gap:0; }
-.field{ display:flex; flex-direction:row; align-items:flex-start; gap:12px; padding:13px 2px; border-bottom:1px solid var(--line-2); }
+.field{ display:flex; flex-direction:row; align-items:flex-start; gap:12px; padding:9px 2px; border-bottom:1px solid var(--line-2); }
 .field:last-child{ border-bottom:none; }
 .field.full{ display:flex; }
-.field > label{ flex:0 0 72px; padding-top:11px; font-size:16px; color:var(--brown-2); font-weight:550; line-height:1.4; }
-.field-r{ flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+.field > label{ flex:0 0 76px; padding-top:11px; font-size:16px; color:var(--brown-2); font-weight:550; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.field-r{ flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; align-items:flex-end; text-align:right; }
 /* 默认输入框保持原有边框，弹窗表单内(.field-r)才用无边框详情风格 */
 .input, .select, .textarea{
   width:100%; padding:13px 14px; min-height:50px;
@@ -423,7 +423,7 @@ a{ color:var(--olive-deep); text-decoration:none; }
 .field-r .chip-row{ justify-content:flex-end; }
 .field-r .row{ justify-content:flex-end; }
 /* 日期快捷标签在同一行，超出可轻扫滚动 */
-.field-r .chip-row.date-quick{ flex-wrap:nowrap; justify-content:flex-start; gap:2px; overflow-x:auto; scrollbar-width:none; }
+.field-r .chip-row.date-quick{ width:100%; align-self:stretch; flex-wrap:nowrap; justify-content:flex-start; gap:2px; overflow-x:auto; scrollbar-width:none; }
 .field-r .chip-row.date-quick::-webkit-scrollbar{ display:none; }
 .field-r .chip-row.date-quick .chip{ padding:2px 5px; font-size:11px; white-space:nowrap; }
 .textarea{ min-height:110px; resize:vertical; line-height:1.7; }
