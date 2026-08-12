@@ -1021,6 +1021,13 @@ table.tbl td.ops{ white-space:nowrap; text-align:right; }
 .ov.ok .ov-v{ color:var(--olive); }
 .ov.neg{ border-color:var(--danger-soft, #F2C9C9); }
 .ov.neg .ov-v{ color:var(--danger, #C0392B); }
+/* 合并磁贴（首页总览：本月支出+结余合一） */
+.ov.dual{ align-items:stretch; justify-content:flex-start; gap:2px; padding:9px 7px; }
+.ov-vs{ display:flex; flex-direction:column; gap:0; line-height:1.25; }
+.ov-line{ font-size:11px; color:#9A8A85; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ov-line b{ font-size:15px; font-weight:700; color:var(--brown); margin-left:2px; }
+.ov-line b.neg{ color:var(--danger, #C0392B); }
+.ov.dual .ov-k{ text-align:left; margin-top:2px; }
 
 /* 自动备份 */
 .backup-cfg{ display:flex; flex-direction:column; gap:10px; }

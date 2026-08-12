@@ -137,16 +137,23 @@
         { v: water + 'ml', k: '今日饮水', go: 'body', tk: 'main', tv: 'water', ok: wGoal && water >= wGoal },
         { v: buy, k: '待购清单', go: 'items', tk: 'main', tv: 'buy' },
         { v: stockLow, k: '库存预警', go: 'items', tk: 'main', tv: 'stock', warn: stockLow > 0 },
-        { v: U.money(exp), k: '本月支出', go: 'finance', full: U.moneyFull(exp) },
-        { v: U.money(balance), k: '本月结余', go: 'finance', neg: balance < 0, full: U.moneyFull(balance) },
+        { k: '本月收支', go: 'finance', dual: [
+          ['支', U.money(exp), false, U.moneyFull(exp)],
+          ['余', U.money(balance), balance < 0, U.moneyFull(balance)]
+        ] },
         { v: examUp, k: '备考进行', go: 'exam' },
         { v: fmtDur(readMins), k: '今天看书时长', go: 'media', tk: 'type', tv: 'book' },
         { v: diaryM, k: '本月日记', go: 'diary' }
       ];
       return '<div class="ov-grid">' + items.map(function (o) {
-        return '<button class="ov tap' + (o.warn ? ' warn' : '') + (o.ok ? ' ok' : '') + (o.neg ? ' neg' : '') + '" data-act="goStat" data-go="' + o.go + '"' +
+        var inner = o.dual
+          ? '<span class="ov-vs">' + o.dual.map(function (p) {
+              return '<span class="ov-line">' + esc(p[0]) + ' <b' + (p[2] ? ' class="neg"' : '') + (p[3] ? ' title="' + esc(p[3]) + '"' : '') + '>' + esc('' + p[1]) + '</b></span>';
+            }).join('') + '</span>'
+          : '<span class="ov-v"' + (o.full ? ' title="' + esc(o.full) + '"' : '') + '>' + esc('' + o.v) + '</span>';
+        return '<button class="ov tap' + (o.dual ? ' dual' : '') + (o.warn ? ' warn' : '') + (o.ok ? ' ok' : '') + (o.neg ? ' neg' : '') + '" data-act="goStat" data-go="' + o.go + '"' +
           (o.tk ? ' data-tk="' + o.tk + '" data-tv="' + o.tv + '"' : '') + '>' +
-          '<span class="ov-v"' + (o.full ? ' title="' + esc(o.full) + '"' : '') + '>' + esc('' + o.v) + '</span><span class="ov-k">' + o.k + '</span></button>';
+          inner + '<span class="ov-k">' + o.k + '</span></button>';
       }).join('') + '</div>';
     },
 
