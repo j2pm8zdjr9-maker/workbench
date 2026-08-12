@@ -306,7 +306,7 @@
             inner = '<textarea class="textarea" name="' + f.k + '" placeholder="' + esc(f.ph || '') + '" rows="' + (f.rows || 4) + '">' + esc(v) + '</textarea>';
           } else if (f.type === 'select') {
             var catAttr = f.catns ? ' data-catns="' + f.catns + '" data-prev="' + esc(String(v)) + '"' : '';
-            var opts = typeof f.options === 'function' ? f.options({}) : (f.options || []);
+            var opts = typeof f.options === 'function' ? f.options(vals) : (f.options || []);
             inner = '<select class="select" name="' + f.k + '"' + catAttr + '>' +
               (f.ph ? '<option value="">' + esc(f.ph) + '</option>' : '') +
               opts.map(function (o) {

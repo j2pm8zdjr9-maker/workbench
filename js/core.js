@@ -18,7 +18,22 @@
         fuel: { serviceMile: 0, serviceDate: '', refuels: [] }
       },
       items: { stock: [], buy: [], consum: [] },
-      finance: { accounts: [], flows: [], goals: [], catExpense: ['餐饮', '交通', '购物', '居家', '娱乐', '医疗', '学习', '人情'], catIncome: ['工资', '奖金', '理财收益', '兼职', '红包'] },
+      finance: { accounts: [], flows: [], goals: [], catExpense: [
+        { name: '餐饮', subs: ['早餐', '午餐', '晚餐', '外卖', '聚餐', '零食', '饮料'] },
+        { name: '交通', subs: ['公交地铁', '打车', '加油', '停车', '高铁机票'] },
+        { name: '购物', subs: ['服饰', '数码', '家居', '美妆', '其他'] },
+        { name: '居家', subs: ['房租', '水电燃气', '物业', '日用品', '维修'] },
+        { name: '娱乐', subs: ['电影', '游戏', '演出', '旅游', '运动'] },
+        { name: '医疗', subs: ['门诊', '药品', '体检', '保险'] },
+        { name: '学习', subs: ['书籍', '课程', '资料'] },
+        { name: '人情', subs: ['礼金', '请客', '红包', '随礼'] }
+      ], catIncome: [
+        { name: '工资', subs: ['月薪', '绩效', '年终奖'] },
+        { name: '奖金', subs: ['项目奖', '节日福利'] },
+        { name: '理财收益', subs: ['利息', '基金', '股票'] },
+        { name: '兼职', subs: ['外包', '零活'] },
+        { name: '红包', subs: ['节日红包', '收红包'] }
+      ] },
       anniv: [],
       social: [],
       wish: [],
@@ -122,6 +137,23 @@
         if (!this.data.settings._archiveMigrated) {
           (this.data.tasks || []).forEach(function (x) { if (x.status === 'archive') { x.status = 'todo'; delete x.doneAt; } });
           this.data.settings._archiveMigrated = true;
+          localStorage.setItem(KEY, JSON.stringify(this.data));
+        }
+      } catch (e) {}
+      // 财务分类升级为「一级 / 二级」两级结构（仅一次性，把旧的扁平分类名转成一级分类）
+      try {
+        if (!this.data.settings._cat2Migrated) {
+          var normCats = function (arr) {
+            if (!Array.isArray(arr)) return [];
+            return arr.map(function (c) {
+              if (typeof c === 'string') return { name: c, subs: [] };
+              if (c && typeof c === 'object') return { name: c.name || '', subs: Array.isArray(c.subs) ? c.subs : [] };
+              return null;
+            }).filter(function (c) { return c && c.name; });
+          };
+          this.data.finance.catExpense = normCats(this.data.finance.catExpense);
+          this.data.finance.catIncome = normCats(this.data.finance.catIncome);
+          this.data.settings._cat2Migrated = true;
           localStorage.setItem(KEY, JSON.stringify(this.data));
         }
       } catch (e) {}

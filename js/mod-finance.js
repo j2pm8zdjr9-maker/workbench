@@ -55,18 +55,30 @@
       '<div class="row" style="gap:12px;align-items:center;flex-shrink:0;margin-left:8px">' +
       '<span style="font-weight:700;color:' + color + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + U.moneyFull(f.amount) + '">' + sign + money(f.amount) + '</span>' +
       UI.ops(f.id, 'fedit', 'fdel') + '</div></div>';
-    var detail = '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + (f.time ? ' · ' + esc(f.time) : '') + '</span>' +
+    var meta = '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + (f.time ? ' · ' + esc(f.time) : '') + '</span>' +
       (f.type !== 'transfer' ? '<span class="badge grey">' + esc(accName(f.acc)) + '</span>' : '<span class="badge info">转账</span>') +
-      '</div>' +
-      (f.note ? '<div class="item-meta"><span>' + esc(f.note) + '</span></div>' : '');
-    return '<div class="item" data-id="' + esc(f.id) + '">' +
-      '<div class="item-main">' + main + detail + '</div></div>';
+      (f.sub ? '<span class="badge grey">' + esc(f.sub) + '</span>' : '') +
+      (f.note ? '<span class="item-chev tap" title="展开备注">▸</span>' : '') + '</div>';
+    var note = f.note ? '<div class="item-detail"><div class="item-note-line">' + esc(f.note) + '</div></div>' : '';
+    var cls = 'item' + (f.note ? ' clickable' : '');
+    var tog = f.note ? ' data-toggle' : '';
+    return '<div class="' + cls + '"' + tog + ' data-id="' + esc(f.id) + '">' +
+      '<div class="item-main">' + main + meta + '</div>' + note + '</div>';
   }
 
+  // 分类名（兼容扁平字符串与 {name,subs} 两种结构）
+  function catName(c) { return typeof c === 'string' ? c : (c && c.name) || ''; }
+  function catList(arr) { return (arr || []).map(catName); }
+  function catSubs(arr, name) {
+    for (var i = 0; i < (arr || []).length; i++) {
+      if (catName(arr[i]) === name) return (arr[i].subs || []).slice();
+    }
+    return [];
+  }
   function finCategories() {
     var s = {};
-    (F().catExpense || []).forEach(function (c) { s[c] = 1; });
-    (F().catIncome || []).forEach(function (c) { s[c] = 1; });
+    catList(F().catExpense).forEach(function (c) { s[c] = 1; });
+    catList(F().catIncome).forEach(function (c) { s[c] = 1; });
     F().flows.forEach(function (f) { if (f.cat) s[f.cat] = 1; });
     return Object.keys(s).sort();
   }
@@ -101,7 +113,8 @@
       '<span style="font-weight:700;color:' + color + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;margin-left:8px;" title="' + U.moneyFull(f.amount) + '">' + sign + money(f.amount) + '</span></div>' +
       '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + (f.time ? ' · ' + esc(f.time) : '') + '</span>' +
       '<span class="badge grey">' + esc(accName(f.acc)) + '</span>' +
-      (f.cat ? '<span class="badge grey">' + esc(f.cat) + '</span>' : '') + '</div>' +
+      (f.cat ? '<span class="badge grey">' + esc(f.cat) + '</span>' : '') +
+      (f.sub ? '<span class="badge grey">' + esc(f.sub) + '</span>' : '') + '</div>' +
       '</div></div>';
   }
   // 图表点击放大：把图表 html 存进 store，点击时以更大尺寸灯箱展示
@@ -120,7 +133,7 @@
       el.className = 'modal-mask chart-lightbox';
       el.innerHTML = '<div class="chart-lightbox-inner">' +
         '<button class="di-lightbox-x tap" data-cx>✕</button>' +
-        '<div class="chart-lightbox-scroll">' + html + '</div></div>';
+        '<div class="chart-lightbox-scroll"><div class="chart-lightbox-card">' + html + '</div></div></div>';
       root.appendChild(el);
       UI.lock();
       el.addEventListener('click', function (e) {
@@ -387,6 +400,7 @@
           if (!v) return;
           v.id = U.uid();
           if (v.newcat) { addCat(v.type, v.newcat); v.cat = v.newcat; delete v.newcat; }
+          if (v.newsub && v.cat) { addSub(v.type, v.cat, v.newsub); v.sub = v.newsub; delete v.newsub; }
           F().flows.push(v); Store.save(); App.refresh(); U.toast('已记录');
         });
       },
@@ -412,6 +426,8 @@
           if (!v) return;
           if (v.newcat) { addCat(v.type, v.newcat); v.cat = v.newcat; }
           delete v.newcat;
+          if (v.newsub && v.cat) { addSub(v.type, v.cat, v.newsub); v.sub = v.newsub; }
+          delete v.newsub;
           Object.keys(v).forEach(function (k) { x[k] = v[k]; });
           Store.save(); App.refresh();
         });
@@ -481,6 +497,10 @@
         }
         draw();
         el.addEventListener('click', function (e) {
+          var togg = e.target.closest('.item.clickable');
+          if (togg && togg.hasAttribute('data-toggle') && !e.target.closest('[data-act]') && !e.target.closest('.item-ops')) {
+            e.preventDefault(); togg.classList.toggle('open'); return;
+          }
           var b = e.target.closest('[data-act]'); if (!b) return;
           if (b.dataset.act === 'listPg') { e.preventDefault(); ListPager.handle('listPg', b); }
         });
@@ -491,13 +511,24 @@
       finCatManage: function () {
         function section(key, title) {
           var arr = F()[key];
-          var pills = arr.length ? arr.map(function (c) {
-            return '<span class="pill" style="display:inline-flex;align-items:center;gap:6px">' + esc(c) +
-              '<button class="link-btn del tap" data-act="finCatDel" data-k="' + key + '" data-c="' + esc(c) + '">×</button></span>';
-          }).join('') : UI.empty('还没有分类');
-          return '<div class="small muted" style="margin:0 0 8px">' + title + '</div>' +
-            '<div class="pills" style="margin-bottom:10px">' + pills + '</div>' +
-            '<div class="field full"><input class="input" id="newcat-' + key + '" placeholder="新增' + title + '"></div>' +
+          var blocks = (arr || []).map(function (c) {
+            var name = catName(c);
+            var subs = c.subs || [];
+            var subPills = subs.length ? subs.map(function (s) {
+              return '<span class="pill" style="display:inline-flex;align-items:center;gap:6px">' + esc(s) +
+                '<button class="link-btn del tap" data-act="finSubDel" data-k="' + key + '" data-c="' + esc(name) + '" data-s="' + esc(s) + '">×</button></span>';
+            }).join('') : '<span class="small muted">暂无二级分类</span>';
+            return '<div class="cat-blk">' +
+              '<div class="row between" style="margin-bottom:6px"><strong>' + esc(name) + '</strong>' +
+              '<button class="link-btn del tap" data-act="finCatDel" data-k="' + key + '" data-c="' + esc(name) + '">删除</button></div>' +
+              '<div class="pills" style="margin-bottom:6px">' + subPills + '</div>' +
+              '<div class="row" style="gap:8px;margin-bottom:14px"><input class="input" placeholder="新增二级分类" style="flex:1;min-width:0">' +
+              '<button class="btn primary sm tap" data-act="finSubAdd" data-k="' + key + '" data-c="' + esc(name) + '">+ 添加</button></div>' +
+              '</div>';
+          }).join('');
+          return '<div class="small muted" style="margin:0 0 8px">' + title + '（一级分类）</div>' +
+            (blocks || UI.empty('还没有分类')) +
+            '<div class="field full" style="margin-top:4px"><input class="input" id="newcat-' + key + '" placeholder="新增' + title + '"></div>' +
             '<button class="btn primary sm tap" data-act="finCatAdd" data-k="' + key + '" style="margin-bottom:14px">+ 添加' + title + '</button>';
         }
         function renderAll() { return section('catExpense', '支出分类') + '<div style="height:6px"></div>' + section('catIncome', '收入分类'); }
@@ -505,15 +536,24 @@
         var body = el.querySelector('.modal-body');
         el.addEventListener('click', function (e) {
           var b = e.target.closest('[data-act]'); if (!b) return;
-          var a = b.dataset.act;
+          var a = b.dataset.act, key = b.dataset.k;
           if (a === 'finCatAdd') {
-            var key = b.dataset.k, inp = el.querySelector('#newcat-' + key), v = (inp.value || '').trim();
+            var inp = el.querySelector('#newcat-' + key), v = (inp.value || '').trim();
             if (!v) return;
-            if (F()[key].indexOf(v) < 0) { F()[key].push(v); Store.save(); }
+            if (!catList(F()[key]).some(function (x) { return x === v; })) { F()[key].push({ name: v, subs: [] }); Store.save(); }
             inp.value = ''; body.innerHTML = renderAll(); App.refresh();
           } else if (a === 'finCatDel') {
-            var key2 = b.dataset.k;
-            F()[key2] = F()[key2].filter(function (x) { return x !== b.dataset.c; });
+            F()[key] = F()[key].filter(function (x) { return catName(x) !== b.dataset.c; });
+            Store.save(); body.innerHTML = renderAll(); App.refresh();
+          } else if (a === 'finSubAdd') {
+            var blk = b.closest('.cat-blk'), si = blk ? blk.querySelector('input') : null, sv = (si ? si.value : '').trim();
+            if (!sv || !b.dataset.c) return;
+            var cc = F()[key].filter(function (x) { return catName(x) === b.dataset.c; })[0];
+            if (cc) { if (!cc.subs) cc.subs = []; if (cc.subs.indexOf(sv) < 0) cc.subs.push(sv); Store.save(); }
+            if (si) si.value = ''; body.innerHTML = renderAll(); App.refresh();
+          } else if (a === 'finSubDel') {
+            var cd = F()[key].filter(function (x) { return catName(x) === b.dataset.c; })[0];
+            if (cd && cd.subs) cd.subs = cd.subs.filter(function (s) { return s !== b.dataset.s; });
             Store.save(); body.innerHTML = renderAll(); App.refresh();
           }
         });
@@ -565,12 +605,18 @@
           render: function (f) {
             var sign = f.type === 'in' ? '+' : f.type === 'out' ? '-' : '';
             var color = f.type === 'in' ? '#6E8A28' : f.type === 'out' ? '#B4553F' : '#6E8A9B';
-            return '<div class="item"><div class="item-main">' +
+            var hasNote = !!f.note;
+            var meta = '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + (f.time ? ' · ' + esc(f.time) : '') + '</span>' +
+              (f.type !== 'transfer' ? '<span class="badge grey">' + esc(accName(f.acc)) + '</span>' : '<span class="badge info">转账</span>') +
+              (f.sub ? '<span class="badge grey">' + esc(f.sub) + '</span>' : '') +
+              (hasNote ? '<span class="item-chev tap" title="展开备注">▸</span>' : '') + '</div>';
+            var note = hasNote ? '<div class="item-detail"><div class="item-note-line">' + esc(f.note) + '</div></div>' : '';
+            var cls = 'item' + (hasNote ? ' clickable' : '');
+            var tog = hasNote ? ' data-toggle' : '';
+            return '<div class="' + cls + '"' + tog + ' data-id="' + esc(f.id) + '"><div class="item-main">' +
               '<div class="row between" style="gap:10px"><span class="item-title">' + esc(f.type === 'transfer' ? accName(f.acc) + ' → ' + accName(f.acc2) : (f.cat || '未分类')) + '</span>' +
               '<span style="font-weight:700;color:' + color + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;margin-left:8px;" title="' + U.moneyFull(f.amount) + '">' + sign + money(f.amount) + '</span></div>' +
-              '<div class="item-meta"><span>' + U.fmtDate(f.date, true) + (f.time ? ' · ' + esc(f.time) : '') + '</span>' +
-              (f.type !== 'transfer' ? '<span class="badge grey">' + esc(accName(f.acc)) + '</span>' : '<span class="badge info">转账</span>') +
-              (f.note ? '<span>' + esc(f.note) + '</span>' : '') + '</div></div>' +
+              meta + '</div>' + note +
               UI.ops(f.id, null, 'hdel') + '</div>';
           },
           acts: {
@@ -699,11 +745,13 @@
     s1.forEach(function (r) {
       var type = r['类型'] === '收入' ? 'in' : 'out';
       var cat = r['一级分类'];
+      var sub = r['二级分类'];
       if (cat) addCat(type, cat);
+      if (cat && sub) addSub(type, cat, sub);
       F().flows.push({
         id: U.uid(), type: type, amount: Math.abs(num(r['金额'])),
         acc: get(r['账户']), date: normDate(r['日期']),
-        cat: cat || '', note: [r['二级分类'], r['备注']].filter(function (x) { return x != null && x !== ''; }).join(' · ')
+        cat: cat || '', sub: sub || '', note: r['备注'] || ''
       });
       stat.flow++;
     });
@@ -736,7 +784,7 @@
         '日期': f.date, '时间': (f.time || '00:00:00') + (f.time && f.time.length === 5 ? ':00' : ''),
         '类型': f.type === 'in' ? '收入' : '支出',
         '金额': Math.abs(num(f.amount)),
-        '一级分类': f.cat || '', '二级分类': '', '标签': '',
+        '一级分类': f.cat || '', '二级分类': f.sub || '', '标签': '',
         '账户': accName(f.acc),
         '计入收支': '是', '计入预算': '是', '所属账本': '总账本',
         '备注': f.note || ''
@@ -768,7 +816,14 @@
 
   function addCat(type, c) {
     var k = type === 'out' ? 'catExpense' : 'catIncome';
-    if (c && F()[k].indexOf(c) < 0) F()[k].push(c);
+    if (c && !catList(F()[k]).some(function (x) { return x === c; })) F()[k].push({ name: c, subs: [] });
+  }
+  function addSub(type, cat, sub) {
+    var k = type === 'out' ? 'catExpense' : 'catIncome';
+    var c = F()[k].filter(function (x) { return catName(x) === cat; })[0];
+    if (!c) return;
+    if (!c.subs) c.subs = [];
+    if (c.subs.indexOf(sub) < 0) c.subs.push(sub);
   }
 
   function flowFields(type) {
@@ -778,8 +833,10 @@
       { k: 'acc', label: '账户', type: 'select', req: true, options: F().accounts.map(function (a) { return { v: a.id, t: a.name }; }) },
       { k: 'date', label: '日期', type: 'date', req: true, def: U.today() },
       { k: 'time', label: '时间', type: 'time', req: true, def: U.nowTime() },
-      { k: 'cat', label: '分类', type: 'select', ph: '请选择', depends: ['type'], options: function (all) { return all.type === 'in' ? F().catIncome : F().catExpense; } },
-      { k: 'newcat', label: '或新增分类', ph: '填了会自动加入分类库' },
+      { k: 'cat', label: '一级分类', type: 'select', ph: '请选择', depends: ['type'], options: function (all) { return catList(all.type === 'in' ? F().catIncome : F().catExpense); } },
+      { k: 'newcat', label: '或新增一级分类', ph: '填了会自动加入分类库' },
+      { k: 'sub', label: '二级分类', type: 'select', ph: '可选', depends: ['cat'], options: function (all) { return catSubs(all.type === 'in' ? F().catIncome : F().catExpense, all.cat); } },
+      { k: 'newsub', label: '或新增二级分类', ph: '填了会归入上方一级分类' },
       { k: 'note', label: '备注', type: 'textarea', rows: 3 }
     ];
   }
