@@ -245,7 +245,7 @@
           ['已抄表电量', s.meter.toFixed(2) + ' 度'],
           ['充入电量', s.charged.toFixed(2) + ' 度（含免费）'],
           ['平均损耗率', s.loss.toFixed(1) + ' %']
-        ]) + (s.km > 0
+        ], 4) + (s.km > 0
           ? '<div class="small muted" style="margin-top:8px">平均能耗：' + (s.charged / s.km * 100).toFixed(2) + ' 度/100km · ' +
             '实付每公里 ' + U.money(perKm) + '（已含单位免费电）；若无免费电，等效每公里 ' + U.money(eqPerKm) + '</div>'
           : '<div class="small muted" style="margin-top:8px">记录相邻两次充电的「充电前总里程」后，即可自动推算每公里花费</div>')
@@ -283,7 +283,7 @@
           ['累计花费', U.money(s.cost), false, U.moneyFull(s.cost)],
           ['累计加油', s.liters.toFixed(2) + ' 升'],
           ['平均', s.perKm > 0 ? U.money(s.perKm) + ' /km' : '—', false, s.perKm > 0 ? U.moneyFull(s.perKm) : '']
-        ]) + (s.km > 0 ? '<div class="small muted" style="margin-top:8px">统计区间内共行驶 ' + s.km + ' km</div>' : '')
+        ], 3) + (s.km > 0 ? '<div class="small muted" style="margin-top:8px">统计区间内共行驶 ' + s.km + ' km</div>' : '')
       });
       var srt = sortedRefuels();
       var kmMap = {};

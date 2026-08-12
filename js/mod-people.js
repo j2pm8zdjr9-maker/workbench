@@ -707,7 +707,7 @@
       var counts = [
         ['打卡任务', (d.checkin.habits || []).length],
         ['累计打卡', Object.keys(d.checkin.log || {}).reduce(function (s, k) { return s + Object.keys(d.checkin.log[k] || {}).length; }, 0)],
-        ['影剧书', d.media.length], ['备考笔记', d.exam.notes.length + d.exam.plans.length + d.exam.records.length],
+        ['影剧书', d.media.length], ['备考条目', d.exam.plans.length + d.exam.records.length],
         ['车辆记录', (d.vehicles.ev.charges.length + d.vehicles.fuel.refuels.length)], ['身体记录', d.body.measures.length + d.body.sports.length + d.body.meals.length],
         ['物品管理', d.items.stock.length + d.items.buy.length + d.items.consum.length],
         ['财务流水', d.finance.flows.length], ['纪念日', d.anniv.length], ['人情往来', d.social.length],

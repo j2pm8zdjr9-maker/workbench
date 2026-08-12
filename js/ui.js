@@ -147,12 +147,12 @@
       return '<div class="bar' + (thin ? ' thin' : '') + '"><i class="' + (pct >= 100 ? 'full' : '') + '" style="width:' + pct + '%"></i></div>';
     },
 
-    stat: function (k, v, accent, title) {
-      return '<div class="stat' + (accent ? ' accent' : '') + '"' + (title ? ' title="' + esc(title) + '"' : '') + '><span class="k">' + esc(k) + '</span><span class="v">' + v + '</span></div>';
+    stat: function (k, v, accent, title, wide) {
+      return '<div class="stat' + (accent ? ' accent' : '') + (wide ? ' col-2' : '') + '"' + (title ? ' title="' + esc(title) + '"' : '') + '><span class="k">' + esc(k) + '</span><span class="v">' + v + '</span></div>';
     },
 
-    stats: function (arr) {
-      return '<div class="stat-grid">' + arr.map(function (s) { return UI.stat(s[0], s[1], s[2], s[3]); }).join('') + '</div>';
+    stats: function (arr, cols) {
+      return '<div class="stat-grid' + (cols ? ' cols-' + cols : '') + '">' + arr.map(function (s) { return UI.stat(s[0], s[1], s[2], s[3], s[4]); }).join('') + '</div>';
     },
 
     badge: function (t, cls) { return '<span class="badge' + (cls ? ' ' + cls : '') + '">' + esc(t) + '</span>'; },

@@ -35,8 +35,8 @@
     mins = Math.round(num(mins));
     if (!mins) return '0分';
     var h = Math.floor(mins / 60), m = mins % 60;
-    if (h && m) return h + '时' + m + '分';
-    if (h) return h + '时';
+    if (h && m) return h + '小时' + m + '分';
+    if (h) return h + '小时';
     return m + '分';
   }
 

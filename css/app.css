@@ -483,6 +483,9 @@ a{ color:var(--olive-deep); text-decoration:none; }
 .note-fold[open] .note-sum{ color:var(--brown-4); }
 .note-fold[open] .note-sum::before{ transform:translateY(1px) rotate(90deg); }
 .note-fold > .item-note{ margin-top:4px; }
+/* 学习记录「学了什么」：展开后内容过长时限制高度、内部滚动，避免把整页拉得过长 */
+.note-fold > .study-content{ max-height:170px; overflow:auto; -webkit-overflow-scrolling:touch; }
+.note-fold[open] > .study-content{ margin-top:4px; }
 .item .item-ops{ display:flex; gap:2px; flex:0 0 auto; align-items:center; }
 .item.done .item-title{ color:var(--brown-4); text-decoration:line-through; }
 .item.hl{ border-color:var(--olive-soft); background:var(--olive-05); }
@@ -517,12 +520,19 @@ a{ color:var(--olive-deep); text-decoration:none; }
 
 /* 网格统计 */
 .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px; }
+.stat-grid.cols-2{ grid-template-columns:repeat(2,1fr); }
+.stat-grid.cols-3{ grid-template-columns:repeat(3,1fr); }
+.stat-grid.cols-4{ grid-template-columns:repeat(4,1fr); }
+.stat.col-2{ grid-column:span 2; }
 .stat{
   padding:16px; border-radius:var(--r); background:var(--cream-soft);
   border:1px solid var(--line); display:flex; flex-direction:column; gap:3px;
 }
 .stat .k{ font-size:12.5px; color:var(--brown-3); }
 .stat .v{ font-size:21px; font-weight:700; letter-spacing:.4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+/* 跨两列的大数值面板：数值完整显示，不缩写 */
+.stat-grid.cols-2 .stat.col-2 .v,
+.stat-grid.cols-2 .stat .v{ white-space:normal; word-break:break-word; text-overflow:clip; }
 .stat.accent{ background:var(--olive-10); border-color:var(--olive-24); }
 .stat.accent .v{ color:var(--olive-darker); }
 

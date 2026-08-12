@@ -249,7 +249,7 @@
           ['消耗（基代+运动）', Math.round(burn) + ' kcal'],
           [gap >= 0 ? '热量缺口' : '热量盈余', (gap >= 0 ? '-' : '+') + Math.round(Math.abs(gap)) + ' kcal', true],
           ['基础代谢', bmr() + ' kcal']
-        ]) +
+        ], 2) +
           '<div class="small muted" style="margin-top:12px">基础代谢默认按体重 × 22 估算，可在 ⚙️ 设置中自定义。运动消耗自动取当日运动记录。</div>' +
           '<div style="height:18px"></div>' +
           ListPager.out({ ns: 'body:meal', items: items, defSize: 5, empty: '记录今天吃了什么，自动核算摄入热量', emptyIcon: '🍽', render: renderMealItem })
@@ -259,7 +259,13 @@
     acts: {
       tab: function (t) { App.setTab('body', 'main', t.dataset.k); App.refresh(); },
       metric: function (t) { App.setTab('body', 'metric', t.dataset.k); ListPager.resetPg('body:measure'); measureExpanded = null; App.refresh(); },
-      mexp: function (t) { measureExpanded = measureExpanded === t.dataset.id ? null : t.dataset.id; App.refresh(); },
+      mexp: function (t) {
+        var id = t.dataset.id, was = measureExpanded === id;
+        if (!was) App.rememberScroll('exp:' + id);
+        measureExpanded = was ? null : id;
+        App.refresh();
+        if (was) App.returnToScroll('exp:' + id);
+      },
 
       mnew: function () {
         var m = mMetric();
@@ -541,6 +547,31 @@
   var stockWarnOnly = false; // 只看预警
   var stockExpanded = null;  // 当前展开的物品 id
   var measureExpanded = null; // 当前展开的体重记录 id
+  var stockMoreOpen = false; // 库存分类「更多」展开态
+
+  // 库存分类胶囊：受分类管理「直接显示个数」(catPin) 控制——仅直接显示前 N-1 个，
+  // 其余收进「更多 ▾」，点击展开。与全站其他筛选条行为一致。
+  function stockChips() {
+    var ns = 'itemCats';
+    var all = Cats.get(ns);
+    var pin = Cats.pin(ns);
+    var fixedN = Math.max(0, pin - 1);
+    var pinned = all.slice(0, fixedN);
+    var rest = all.slice(fixedN);
+    var html = '<button class="chip tap' + (!stockFilter ? ' on' : '') + '" data-act="kfilter" data-cat="">全部</button>';
+    html += pinned.map(function (c) {
+      return '<button class="chip tap' + (stockFilter === c ? ' on' : '') + '" data-act="kfilter" data-cat="' + U.esc(c) + '">' + U.esc(c) + '</button>';
+    }).join('');
+    if (rest.length) {
+      html += '<button class="chip tap' + (stockMoreOpen ? ' on' : '') + '" data-act="kmoreCats">' + (stockMoreOpen ? '收起 ▴' : '更多 ▾') + '</button>';
+      if (stockMoreOpen) {
+        html += rest.map(function (c) {
+          return '<button class="chip tap' + (stockFilter === c ? ' on' : '') + '" data-act="kfilter" data-cat="' + U.esc(c) + '">' + U.esc(c) + '</button>';
+        }).join('');
+      }
+    }
+    return '<div class="chip-row" style="margin:2px 0 10px">' + html + '</div>';
+  }
   // 库存排序维度（与历史记录一致：点同一键在高→低 / 低→高之间切换）
   var stockSortKeys = [
     { k: 'qty', t: '按数量', get: function (x) { return num(x.left); } },
@@ -616,8 +647,7 @@
       var chip = function (label, val) {
         return '<button class="chip tap' + (filter === val ? ' on' : '') + '" data-act="kfilter" data-cat="' + esc(val) + '">' + esc(label) + '</button>';
       };
-      var chips = '<div class="chip-row" style="margin:2px 0 10px">' + chip('全部', '') +
-        cats.map(function (c) { return chip(c, c); }).join('') + '</div>';
+      var chips = stockChips();
       var toolbar = '<div class="stock-toolbar">' +
         ListPager.sortPills('items:stock', stockSortKeys) +
         '<button class="chip tap' + (stockWarnOnly ? ' on danger' : '') + '" data-act="kwarn">' + (stockWarnOnly ? '🔔 仅看预警' : '🔔 只看预警') + '</button>' +
@@ -702,7 +732,14 @@
     acts: {
       tab: function (t) { App.setTab('items', 'main', t.dataset.k); App.refresh(); },
       kfilter: function (t) { stockFilter = t.dataset.cat || ''; stockExpanded = null; ListPager.resetPg('items:stock'); App.refresh(); },
-      kexp: function (t) { var id = t.dataset.id; stockExpanded = stockExpanded === id ? null : id; App.refresh(); },
+      kmoreCats: function () { stockMoreOpen = !stockMoreOpen; App.refresh(); },
+      kexp: function (t) {
+        var id = t.dataset.id, was = stockExpanded === id;
+        if (!was) App.rememberScroll('exp:' + id);
+        stockExpanded = was ? null : id;
+        App.refresh();
+        if (was) App.returnToScroll('exp:' + id);
+      },
       kwarn: function () { stockWarnOnly = !stockWarnOnly; stockExpanded = null; ListPager.resetPg('items:stock'); App.refresh(); },
       kmore: function (t) {
         var x = D().items.stock.filter(function (a) { return a.id === t.dataset.id; })[0];

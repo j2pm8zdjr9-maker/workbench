@@ -251,15 +251,17 @@
       var apills = [{ k: 'all', t: '全部' }].concat(Object.keys(MT).map(function (k) { return { k: k, t: MT[k].t }; }));
       return UI.card({
         title: '📅 年度归档', sub: '点击「查看」浏览该年完结作品',
-        body: UI.pills(apills, aType, 'archType') + '<div style="height:10px"></div>' + years.map(function (y) {
-          var l = map[y], sc = l.filter(function (x) { return x.score !== '' && x.score !== undefined; });
-          var av = sc.length ? (sc.reduce(function (s, x) { return s + num(x.score); }, 0) / sc.length).toFixed(1) : '—';
-          var top = U.sortBy(sc, 'score', true)[0];
-          return '<button class="opt-row tap" data-act="viewYear" data-k="' + y + '">' +
-            '<span class="oi">📅</span>' +
-            '<span class="grow">' + y + ' 年 · ' + l.length + ' 部 · 均分 ' + av + (top ? ' · 最高《' + esc(top.title) + '》' : '') + '</span>' +
-            '<span class="badge grey">查看 ›</span></button>';
-        }).join('')
+        body: UI.pills(apills, aType, 'archType') + '<div style="height:10px"></div>' +
+          '<details class="note-fold" open><summary class="note-sum">📅 各年度归档（点击' + (aType === 'all' ? '收起' : '展开') + '）</summary>' +
+          years.map(function (y) {
+            var l = map[y], sc = l.filter(function (x) { return x.score !== '' && x.score !== undefined; });
+            var av = sc.length ? (sc.reduce(function (s, x) { return s + num(x.score); }, 0) / sc.length).toFixed(1) : '—';
+            var top = U.sortBy(sc, 'score', true)[0];
+            return '<button class="opt-row tap" data-act="viewYear" data-k="' + y + '">' +
+              '<span class="oi">📅</span>' +
+              '<span class="grow">' + y + ' 年 · ' + l.length + ' 部 · 均分 ' + av + (top ? ' · 最高《' + esc(top.title) + '》' : '') + '</span>' +
+              '<span class="badge grey">查看 ›</span></button>';
+          }).join('') + '</details>'
       });
     },
 
@@ -267,7 +269,13 @@
       type: function (t) { App.setTab('media', 'type', t.dataset.k); App.setTab('media', 'st', 'all'); ListPager.resetPg('media:list'); App.refresh(); },
       archType: function (t) { App.setTab('media', 'archType', t.dataset.k); App.refresh(); },
       st: function (t) { App.setTab('media', 'st', t.dataset.k); ListPager.resetPg('media:list'); App.refresh(); },
-      mexp: function (t) { mediaExpanded = mediaExpanded === t.dataset.id ? null : t.dataset.id; App.refresh(); },
+      mexp: function (t) {
+        var id = t.dataset.id, was = mediaExpanded === id;
+        if (!was) App.rememberScroll('exp:' + id);
+        mediaExpanded = was ? null : id;
+        App.refresh();
+        if (was) App.returnToScroll('exp:' + id);
+      },
       hist: function () {
         var curType = App.tab('media', 'type', 'movie');
         Hist.open({
@@ -416,16 +424,44 @@
     return true;
   }
 
-  /* 备考编辑（学习计划 / 学习记录 / 笔记 共用）：after 为保存后的回调（如历史弹窗重绘） */
+  /* ---------- 学习计划：显示区间 + 状态 ---------- */
+  function planSt() { return App.tab('exam', 'pst', 'all'); }
+  // 计划从「设立当天」(created) 一直显示到「预计完成日」(due)；完成后显示到完成日(doneAt)
+  function planVisibleOnDay(x, day) {
+    var start = x.created || x.due || '';
+    var end = x.done ? (x.doneAt || x.due || '') : (x.due || '');
+    if (!start || !end) return false;
+    return day >= start && day <= end;
+  }
+  function planStatusOf(x) {
+    if (x.done) return 'done';
+    if (x.due && U.dayDiff(U.today(), x.due) < 0) return 'overdue';
+    return 'doing';
+  }
+
+  /* ---------- 艾宾浩斯复习（与学习记录联动） ---------- */
+  var EB_INTERVALS = [1, 2, 4, 7, 15, 30];   // 复习间隔（天）
+  function reviewStage(x) { return x.reviewStage || 0; }
+  function nextReviewDate(x) {
+    var s = reviewStage(x);
+    if (s >= EB_INTERVALS.length) return null;
+    return U.shiftDay(x.date, EB_INTERVALS[s]);
+  }
+  function reviewStatus(x) {
+    if (reviewStage(x) >= EB_INTERVALS.length) return 'done';
+    var nd = nextReviewDate(x);
+    if (nd && U.dayDiff(U.today(), nd) < 0) return 'overdue';
+    return 'doing';
+  }
+
+  /* 备考编辑（学习计划 / 学习记录 共用）：after 为保存后的回调（如历史弹窗重绘） */
   function editExamItem(it, after) {
     var x = it.x, kind = it.k;
     var fields = kind === 'plan'
       ? [{ k: 'text', label: '计划内容', req: true, full: true }].concat(examCatFields()).concat([{ k: 'due', label: '预计完成日期', type: 'date' }])
-      : kind === 'record'
-        ? [{ k: 'date', label: '日期', type: 'date', req: true }, { k: 'mins', label: '时长（分钟）', type: 'number', min: 0, req: true }].concat(examCatFields()).concat([{ k: 'content', label: '学了什么', type: 'textarea', rows: 4 }])
-        : [{ k: 'title', label: '标题', req: true, full: true }].concat(examCatFields()).concat([{ k: 'date', label: '日期', type: 'date' }, { k: 'content', label: '内容', type: 'textarea', req: true, rows: 7 }]);
+      : [{ k: 'date', label: '日期', type: 'date', req: true }, { k: 'mins', label: '时长（分钟）', type: 'number', min: 0, req: true }].concat(examCatFields()).concat([{ k: 'content', label: '学了什么', type: 'textarea', rows: 4 }]);
     UI.form({
-      title: kind === 'plan' ? '编辑学习计划' : kind === 'record' ? '编辑学习记录' : '编辑笔记',
+      title: kind === 'plan' ? '编辑学习计划' : '编辑学习记录',
       values: x, fields: fields
     }).then(function (v) { if (!v) return; Object.keys(v).forEach(function (k) { x[k] = v[k]; }); Store.save(); if (after) after(); });
   }
@@ -439,20 +475,33 @@
         (x.due ? '<span class="badge ' + (overdue ? 'danger' : 'grey') + '">📅 ' + U.fmtDate(x.due) + '</span>' : '') + '</div>' : '') +
       '</div>' + UI.ops(x.id, 'pedit', 'pdel') + '</div>';
   }
+  function studyContentHtml(c) {
+    if (!c) return '';
+    return '<div class="item-note study-content">' + esc(c) + '</div>';
+  }
+  function renderReviewItem(x) {
+    var nd = nextReviewDate(x);
+    var od = U.dayDiff(U.today(), nd);
+    var cls = od < 0 ? 'danger' : od === 0 ? 'warn' : 'grey';
+    var txt = od < 0 ? '逾期 ' + Math.abs(od) + ' 天' : od === 0 ? '今天' : od + ' 天后';
+    var canMark = nd <= U.today();
+    return '<div class="item"><div class="item-main">' +
+      '<div class="item-title">' + esc(examCatText(x) || '学习') + (x.content ? ' · ' + esc(x.content.slice(0, 24)) : '') + '</div>' +
+      '<div class="item-meta">' + examCatBadges(x) +
+      '<span>' + U.fmtDate(x.date, true) + ' 学习</span>' +
+      '<span class="badge ' + cls + '">复习 ' + txt + '</span>' +
+      '<span class="badge grey">第 ' + (reviewStage(x) + 1) + '/' + EB_INTERVALS.length + ' 次</span>' +
+      '</div></div>' +
+      (canMark ? '<div class="row" style="margin-top:6px;gap:8px"><button class="link-btn tap" data-act="rmark" data-id="' + x.id + '">✓ 标记已复习</button></div>' : '') +
+      '</div>';
+  }
   function renderExamRecordItem(x) {
     return '<div class="item"><div class="item-main">' +
       '<div class="row between"><span class="item-title">' + esc(examCatText(x) || '学习') + '</span>' +
       '<span class="badge">' + num(x.mins) + ' 分钟</span></div>' +
       '<div class="item-meta"><span>' + U.fmtDate(x.date, true) + '</span></div>' +
-      (x.content ? '<div class="item-note">' + esc(x.content) + '</div>' : '') +
+      studyContentHtml(x.content) +
       '</div>' + UI.ops(x.id, 'redit', 'rdel') + '</div>';
-  }
-  function renderExamNoteItem(x) {
-    return '<div class="item"><div class="item-main">' +
-      '<div class="item-title">' + esc(x.title) + '</div>' +
-      '<div class="item-meta">' + examCatBadges(x) + '<span>' + U.fmtDate(x.date) + '</span></div>' +
-      '<div class="item-note">' + esc(x.content) + '</div></div>' +
-      UI.ops(x.id, 'nedit', 'ndel') + '</div>';
   }
 
   function viewYearContent(y, type) {
@@ -551,14 +600,14 @@
 
     render: function () {
       var t = App.tab('exam', 'main', 'plan');
-      return UI.head('📚 备考计划', '设定考试日期，自由安排计划、记录与笔记') +
+      return UI.head('📚 备考计划', '设定考试日期，自由安排计划、记录，按遗忘曲线复习') +
         this.countdown() +
-        UI.tabs([{ k: 'plan', t: '学习计划', i: '🗓' }, { k: 'record', t: '学习记录', i: '⏱' }, { k: 'note', t: '知识点笔记', i: '📒' }], t, 'tab') +
+        UI.tabs([{ k: 'plan', t: '学习计划', i: '🗓' }, { k: 'record', t: '学习记录', i: '⏱' }, { k: 'review', t: '复习提醒', i: '🔔' }], t, 'tab') +
         examCatFilter() +
         '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 10px">' +
         Cats.btn('examSubject', '科目分类', '🗂 科目管理') + Cats.btn('examContent', '内容分类', '🗂 内容管理') +
         '</div>' +
-        (t === 'plan' ? this.plans() : t === 'record' ? this.records() : this.notes()) +
+        (t === 'plan' ? this.plans() : t === 'record' ? this.records() : this.review()) +
         Cal.card({
           modId: 'exam', title: '📅 备考日历', sub: '数字 = 当天学习次数，点日期查看当天',
           cell: function (date) { return D().exam.records.filter(function (x) { return x.date === date; }).length; },
@@ -569,7 +618,7 @@
               return '<div class="item"><div class="item-main">' +
                 '<div class="item-title">' + esc(examCatText(x) || '学习') + '</div>' +
                 '<div class="item-meta"><span class="badge">' + num(x.mins) + ' 分钟</span></div>' +
-                (x.content ? '<div class="item-note">' + esc(x.content) + '</div>' : '') +
+                studyContentHtml(x.content) +
                 '</div></div>';
             }).join('') + '</div>';
             return { title: U.fmtDate(date, true) + ' · ' + arr.length + ' 次学习', body: body };
@@ -595,27 +644,33 @@
 
     plans: function () {
       var day = eCur.day, isToday = day === U.today();
+      var st = planSt();
       var arr = D().exam.plans.filter(function (x) {
-        if (!x.due || x.due !== day) return false;   // 按「预计完成日期」锚定到当天
+        if (!planVisibleOnDay(x, day)) return false;     // 从设立当天一直显示到预计完成（或完成日）
+        if (st === 'doing' && planStatusOf(x) !== 'doing') return false;
+        if (st === 'overdue' && planStatusOf(x) !== 'overdue') return false;
+        if (st === 'done' && planStatusOf(x) !== 'done') return false;
         return examFilterFn(x);
       });
-      var undone = arr.filter(function (x) { return !x.done; });
-      var done = arr.filter(function (x) { return x.done; });
-      var planList = arr.length ? undone.concat(done) : [];
       // 概览统计（不随日期切换）
       var all = D().exam.plans;
-      var todayDue = all.filter(function (x) { return x.due === U.today(); }).length;
-      var overdue = all.filter(function (x) { return x.due && !x.done && U.dayDiff(U.today(), x.due) < 0; }).length;
+      var doing = all.filter(function (x) { return planStatusOf(x) === 'doing'; }).length;
+      var overdue = all.filter(function (x) { return planStatusOf(x) === 'overdue'; }).length;
       var doneAll = all.filter(function (x) { return x.done; }).length;
       return UI.stats([
-        ['总计划', all.length, true], ['今天到期', todayDue], ['已逾期', overdue, overdue > 0], ['已完成', doneAll]
+        ['总计划', all.length, true], ['进行中', doing], ['已逾期', overdue, overdue > 0], ['已完成', doneAll]
       ]) +
         UI.card({
-          title: '🗓 学习计划', sub: isToday ? ('今天到期 ' + arr.length + ' 项') : (U.fmtDate(day, true) + ' 到期 ' + arr.length + ' 项'),
+          title: '🗓 学习计划', sub: isToday ? '今天' : U.fmtDate(day, true),
           right: '<button class="btn ghost sm tap" data-act="planHist">📜 历史记录</button><button class="btn primary sm tap" data-act="pnew">+ 新增计划</button>',
           body: eDayNav() +
-            (arr.length ? UI.bar(done.length / arr.length * 100) + '<div style="height:16px"></div>' : '') +
-            ListPager.out({ ns: 'exam:plan', items: planList, defSize: 5, empty: '「' + U.fmtDate(day, true) + '」没有到期的学习计划', emptyIcon: '🗓', render: renderPlanItem })
+            UI.tabs([
+              { k: 'doing', t: '进行中' }, { k: 'overdue', t: '逾期' },
+              { k: 'done', t: '已完成' }, { k: 'all', t: '全部' }
+            ], st, 'pst') +
+            '<div style="height:12px"></div>' +
+            (arr.length ? UI.bar(doneAll / Math.max(1, all.length) * 100) + '<div style="height:16px"></div>' : '') +
+            ListPager.out({ ns: 'exam:plan', items: arr, defSize: 5, empty: '「' + U.fmtDate(day, true) + '」没有对应的学习计划', emptyIcon: '🗓', render: renderPlanItem })
         });
     },
 
@@ -647,16 +702,31 @@
         });
     },
 
-    notes: function () {
-      var shown = U.sortBy(D().exam.notes, 'date', true).filter(examFilterFn);
-      return UI.card({
-        title: '📒 知识点笔记', right: '<button class="btn ghost sm tap" data-act="noteHist">📜 历史记录</button><button class="btn primary sm tap" data-act="nnew">+ 新增笔记</button>',
-        body: ListPager.out({ ns: 'exam:note', items: shown, defSize: 5, empty: '收纳易错点、公式、重点概念', emptyIcon: '📒', render: renderExamNoteItem })
-      });
+    /* 复习提醒：与学习记录联动，按艾宾浩斯曲线给出待复习清单 */
+    review: function () {
+      var pending = D().exam.records.filter(function (x) {
+        return reviewStage(x) < EB_INTERVALS.length;   // 未巩固
+      }).map(function (x) {
+        return { x: x, nd: nextReviewDate(x) };
+      }).filter(function (o) { return o.nd; }).sort(function (a, b) { return a.nd.localeCompare(b.nd); });
+      var dueToday = pending.filter(function (o) { return o.nd === U.today(); }).length;
+      var overdue = pending.filter(function (o) { return U.dayDiff(U.today(), o.nd) < 0; }).length;
+      var consolidated = D().exam.records.filter(function (x) { return reviewStage(x) >= EB_INTERVALS.length; }).length;
+      return UI.stats([
+        ['待复习', pending.length, true], ['今天', dueToday], ['已逾期', overdue, overdue > 0], ['已巩固', consolidated]
+      ]) +
+        UI.card({
+          title: '🔔 复习提醒（艾宾浩斯）', sub: '在学习后第 ' + EB_INTERVALS.join(' / ') + ' 天复习，记忆最牢固',
+          right: '<button class="btn ghost sm tap" data-act="rHist">📜 历史记录</button>',
+          body: pending.length
+            ? ListPager.out({ ns: 'exam:review', items: pending.map(function (o) { return o.x; }), defSize: 8, empty: '', render: renderReviewItem })
+            : UI.empty('暂无待复习内容，去学习并记录一条吧', '🔔')
+        });
     },
 
     acts: {
       tab: function (t) { App.setTab('exam', 'main', t.dataset.k); App.refresh(); },
+      pst: function (t) { App.setTab('exam', 'pst', t.dataset.k); ListPager.resetPg('exam:plan'); App.refresh(); },
       eprev: function () { eCur.day = U.shiftDay(eCur.day, -1); ListPager.resetPg('exam:plan'); ListPager.resetPg('exam:record'); App.refresh(); },
       enext: function () { eCur.day = U.shiftDay(eCur.day, 1); ListPager.resetPg('exam:plan'); ListPager.resetPg('exam:record'); App.refresh(); },
       etoday: function () { eCur.day = U.today(); ListPager.resetPg('exam:plan'); ListPager.resetPg('exam:record'); App.refresh(); },
@@ -698,6 +768,7 @@
         }).then(function (v) {
           if (!v) return; v.id = U.uid(); v.done = false;
           if (!v.due) v.due = eCur.day;   // 不填预计完成日期时，默认锚定到当前查看日，确保在对应列表显示
+          v.created = v.created || U.today();   // 从设立当天起显示，直到预计完成日
           D().exam.plans.push(v); Store.save(); App.refresh(); U.toast('已添加');
         });
       },
@@ -715,7 +786,9 @@
         });
       },
       ptoggle: function (t) {
-        D().exam.plans.forEach(function (x) { if (x.id === t.dataset.id) x.done = !x.done; });
+        D().exam.plans.forEach(function (x) {
+          if (x.id === t.dataset.id) { x.done = !x.done; x.doneAt = x.done ? U.today() : ''; }
+        });
         Store.save(); App.refresh();
       },
       pdel: function (t) {
@@ -752,52 +825,74 @@
         D().exam.records = D().exam.records.filter(function (a) { return a.id !== t.dataset.id; });
         Store.save(); App.refresh();
       },
-      nnew: function () {
-        UI.form({
-          title: '新增笔记', values: { date: eCur.day }, fields: [
-            { k: 'title', label: '标题', req: true, full: true }
-          ].concat(examCatFields()).concat([
-            { k: 'date', label: '日期', type: 'date', def: eCur.day },
-            { k: 'content', label: '内容', type: 'textarea', req: true, rows: 7 }
-          ])
-        }).then(function (v) {
-          if (!v) return; v.id = U.uid(); D().exam.notes.push(v); Store.save(); App.refresh();
-        });
+      /* 标记已复习：推进艾宾浩斯复习阶段（与学习记录联动） */
+      rmark: function (t) {
+        var x = D().exam.records.filter(function (a) { return a.id === t.dataset.id; })[0];
+        if (!x) return;
+        x.reviewStage = (x.reviewStage || 0) + 1;
+        Store.save(); App.refresh(); U.toast('已记录第 ' + (x.reviewStage + 1) + ' 次复习');
       },
-      nedit: function (t) {
-        var x = D().exam.notes.filter(function (a) { return a.id === t.dataset.id; })[0];
-        UI.form({
-          title: '编辑笔记', values: x, fields: [
-            { k: 'title', label: '标题', req: true, full: true }
-          ].concat(examCatFields()).concat([
-            { k: 'date', label: '日期', type: 'date' },
-            { k: 'content', label: '内容', type: 'textarea', req: true, rows: 7 }
-          ])
-        }).then(function (v) {
-          if (!v) return; Object.keys(v).forEach(function (k) { x[k] = v[k]; }); Store.save(); App.refresh();
+      /* 复习进度总览（艾宾浩斯）：所有学习记录的复习阶段一览 */
+      rHist: function () {
+        var modId = 'exam_review';
+        var ST = [
+          { k: 'all', t: '全部' }, { k: 'doing', t: '待复习' },
+          { k: 'overdue', t: '已逾期' }, { k: 'done', t: '已巩固' }
+        ];
+        Hist.open({
+          modId: modId, title: '🔔 复习进度总览', searchPh: '🔍 搜索科目 / 内容…',
+          pager: true, defSize: 8, items: function () { return D().exam.records; },
+          date: function (x) { return x.date; },
+          match: function (x, q) { return ((x.subject || '') + ' ' + (x.contentCat || '') + ' ' + (x.content || '')).toLowerCase().indexOf(q) >= 0; },
+          sort: function (a, b) { return String(b.date).localeCompare(String(a.date)); },
+          empty: '还没有学习记录',
+          extraBar: function (cur) { return UI.pills(ST, cur, 'histFilter'); },
+          extraMatch: function (x, v) { if (!v || v === 'all') return true; return reviewStatus(x) === v; },
+          render: function (x) {
+            var st = reviewStatus(x);
+            var nd = nextReviewDate(x);
+            var stBadge = st === 'done' ? '<span class="badge">已巩固</span>'
+              : st === 'overdue' ? '<span class="badge danger">已逾期</span>'
+              : '<span class="badge warn">待复习</span>';
+            var ndTxt = nd ? ('复习 ' + U.fmtDate(nd)) : '已巩固';
+            return '<div class="item"><div class="item-main">' +
+              '<div class="row between"><span class="item-title">' + esc(examCatText(x) || '学习') + (x.content ? ' · ' + esc(x.content.slice(0, 24)) : '') + '</span>' +
+              '<span class="badge">' + num(x.mins) + ' 分钟</span></div>' +
+              '<div class="item-meta">' + examCatBadges(x) + '<span>' + U.fmtDate(x.date, true) + ' 学习</span>' +
+              stBadge + '<span class="badge grey">第 ' + (reviewStage(x) + 1) + '/' + EB_INTERVALS.length + ' 次</span>' +
+              '<span>' + ndTxt + '</span></div>' +
+              studyContentHtml(x.content) + '</div></div>';
+          }
         });
-      },
-      ndel: function (t) {
-        var x = D().exam.notes.filter(function (a) { return a.id === t.dataset.id; })[0];
-        UI.del(x.title, function () { D().exam.notes = D().exam.notes.filter(function (a) { return a.id !== x.id; }); Store.save(); App.refresh(); });
       },
       /* 学习计划 · 独立历史记录（只搜学习计划） */
       planHist: function () {
+        var modId = 'exam_plan';
+        var STATUS = [
+          { k: 'all', t: '全部' }, { k: 'doing', t: '进行中' },
+          { k: 'overdue', t: '逾期' }, { k: 'done', t: '已完成' }
+        ];
         Hist.open({
-          modId: 'exam_plan', title: '🗓 学习计划历史记录', searchPh: '🔍 搜索计划内容 / 科目…',
+          modId: modId, title: '🗓 学习计划历史记录', searchPh: '🔍 搜索计划内容 / 科目…',
           pager: true, defSize: 5, items: function () { return D().exam.plans; },
           date: function (x) { return x.due; },
           match: function (x, q) { return ((x.text || '') + ' ' + (x.subject || '') + ' ' + (x.contentCat || '')).toLowerCase().indexOf(q) >= 0; },
           sort: function (a, b) { return String(b.due || '').localeCompare(String(a.due || '')); },
           empty: '没有符合条件的学习计划',
+          extraBar: function (cur) { return UI.pills(STATUS, cur, 'histFilter'); },
+          extraMatch: function (x, v) { if (!v || v === 'all') return true; return planStatusOf(x) === v; },
+          extraBar2: function (cur) { return Hist.catPills('examSubject', cur, 'histFilter2', '2', modId, '科目'); },
+          extraMatch2: function (x, v) { if (!v) return true; return x.subject === v; },
+          extraBar3: function (cur) { return Hist.catPills('examContent', cur, 'histFilter3', '3', modId, '内容'); },
+          extraMatch3: function (x, v) { if (!v) return true; return x.contentCat === v; },
           render: function (x) {
             var overdue = x.due && !x.done && U.dayDiff(U.today(), x.due) < 0;
             var cb = examCatBadges(x);
             return '<div class="item' + (x.done ? ' done' : '') + '">' +
               '<div class="item-main"><div class="item-title">' + esc(x.text) + '</div>' +
-              (cb || x.due ? '<div class="item-meta">' + cb +
+              (cb || x.due || !x.done ? '<div class="item-meta">' + cb +
                 (x.due ? '<span class="badge ' + (overdue ? 'danger' : 'grey') + '">📅 ' + U.fmtDate(x.due) + '</span>' : '') +
-                (x.done ? '<span class="badge">已完成</span>' : '') + '</div>' : '') +
+                (x.done ? '<span class="badge">已完成</span>' : (overdue ? '' : '<span class="badge info">进行中</span>')) + '</div>' : '') +
               '</div>' + UI.ops(x.id, 'pedit', 'hdel') + '</div>';
           },
           acts: {
@@ -823,19 +918,24 @@
       },
       /* 学习记录 · 独立历史记录（只搜学习记录） */
       recordHist: function () {
+        var modId = 'exam_record';
         Hist.open({
-          modId: 'exam_record', title: '⏱ 学习记录历史记录', searchPh: '🔍 搜索科目 / 内容 / 日期…',
+          modId: modId, title: '⏱ 学习记录历史记录', searchPh: '🔍 搜索科目 / 内容 / 日期…',
           pager: true, defSize: 5, items: function () { return D().exam.records; },
           date: function (x) { return x.date; },
           match: function (x, q) { return ((x.subject || '') + ' ' + (x.contentCat || '') + ' ' + (x.content || '') + ' ' + (x.date || '')).toLowerCase().indexOf(q) >= 0; },
           sort: function (a, b) { return String(b.date).localeCompare(String(a.date)); },
           empty: '该时间段内没有学习记录',
+          extraBar2: function (cur) { return Hist.catPills('examSubject', cur, 'histFilter2', '2', modId, '科目'); },
+          extraMatch2: function (x, v) { if (!v) return true; return x.subject === v; },
+          extraBar3: function (cur) { return Hist.catPills('examContent', cur, 'histFilter3', '3', modId, '内容'); },
+          extraMatch3: function (x, v) { if (!v) return true; return x.contentCat === v; },
           render: function (x) {
             return '<div class="item"><div class="item-main">' +
               '<div class="row between"><span class="item-title">' + esc(examCatText(x) || '学习') + '</span>' +
               '<span class="badge">' + num(x.mins) + ' 分钟</span></div>' +
               '<div class="item-meta"><span>' + U.fmtDate(x.date, true) + '</span></div>' +
-              (x.content ? '<div class="item-note">' + esc(x.content) + '</div>' : '') +
+              studyContentHtml(x.content) +
               '</div>' + UI.ops(x.id, 'redit', 'hdel') + '</div>';
           },
           acts: {
@@ -860,44 +960,6 @@
           }
         });
       },
-      /* 知识点笔记 · 独立历史记录（只搜笔记） */
-      noteHist: function () {
-        Hist.open({
-          modId: 'exam_note', title: '📒 知识点笔记历史记录', searchPh: '🔍 搜索标题 / 科目 / 内容…',
-          pager: true, defSize: 5, items: function () { return D().exam.notes; },
-          date: function (x) { return x.date; },
-          match: function (x, q) { return ((x.title || '') + ' ' + (x.subject || '') + ' ' + (x.contentCat || '') + ' ' + (x.content || '')).toLowerCase().indexOf(q) >= 0; },
-          sort: function (a, b) { return String(b.date).localeCompare(String(a.date)); },
-          empty: '该时间段内没有笔记',
-          render: function (x) {
-            return '<div class="item"><div class="item-main">' +
-              '<div class="item-title">' + esc(x.title) + '</div>' +
-              '<div class="item-meta">' + examCatBadges(x) +
-              '<span>' + U.fmtDate(x.date) + '</span></div>' +
-              '<div class="item-note">' + esc(x.content) + '</div></div>' +
-              UI.ops(x.id, 'nedit', 'hdel') + '</div>';
-          },
-          acts: {
-            nedit: function (t, e, redraw) {
-              var x = D().exam.notes.filter(function (a) { return a.id === t.dataset.id; })[0];
-              if (!x) return;
-              UI.form({ title: '编辑笔记', values: x, fields: [
-                { k: 'title', label: '标题', req: true, full: true }
-              ].concat(examCatFields()).concat([{ k: 'date', label: '日期', type: 'date' }, { k: 'content', label: '内容', type: 'textarea', req: true, rows: 7 }]) })
-                .then(function (v) { if (!v) return; Object.keys(v).forEach(function (k) { x[k] = v[k]; }); Store.save(); if (redraw) redraw(); });
-            },
-            hdel: function (t, e, redraw) {
-              var x = D().exam.notes.filter(function (a) { return a.id === t.dataset.id; })[0];
-              if (!x) return;
-              UI.del(esc(x.title || '笔记'), function () {
-                D().exam.notes = D().exam.notes.filter(function (a) { return a.id !== x.id; });
-                Store.save();
-                if (redraw) redraw();
-              });
-            }
-          }
-        });
-      },
       calPrev: function (t) { Cal.act(t); },
       calNext: function (t) { Cal.act(t); },
       calToday: function (t) { Cal.act(t); },
@@ -906,7 +968,6 @@
         var items = function () {
           var a = [];
           (D().exam.records || []).forEach(function (x) { a.push({ k: 'record', x: x }); });
-          (D().exam.notes || []).forEach(function (x) { a.push({ k: 'note', x: x }); });
           (D().exam.plans || []).forEach(function (x) { a.push({ k: 'plan', x: x }); });
           return a;
         };
@@ -919,33 +980,31 @@
           date: function (it) { return it.k === 'plan' ? it.x.due : it.x.date; },
           match: function (it, q) {
             var x = it.x;
-            var hay = (it.k === 'plan' ? (x.text || '') : (x.title || '')) + ' ' + (x.subject || '') + ' ' + (x.contentCat || '') + ' ' + (x.content || '');
+            var hay = (it.k === 'plan' ? (x.text || '') : '') + ' ' + (x.subject || '') + ' ' + (x.contentCat || '') + ' ' + (x.content || '');
             return hay.toLowerCase().indexOf(q) >= 0;
           },
           sort: function (a, b) { return String(b.x.date || b.x.due || '').localeCompare(String(a.x.date || a.x.due || '')); },
           render: function (it) {
             var x = it.x;
-            var label = it.k === 'record' ? '⏱ 学习' : it.k === 'note' ? '📒 笔记' : '🗓 计划';
+            var label = it.k === 'record' ? '⏱ 学习' : '🗓 计划';
             var dd = it.k === 'plan' ? x.due : x.date;
             return '<div class="item"><div class="item-main">' +
-              '<div class="row between"><span class="item-title">' + esc(it.k === 'plan' ? (x.text || '计划') : (x.title || examCatText(x) || '学习')) + '</span>' +
+              '<div class="row between"><span class="item-title">' + esc(it.k === 'plan' ? (x.text || '计划') : (examCatText(x) || '学习')) + '</span>' +
               '<span class="badge grey">' + label + '</span></div>' +
               '<div class="item-meta">' + examCatBadges(x) +
               (dd ? '<span>' + U.fmtDate(dd) + (it.k === 'plan' ? '（计划）' : '') + '</span>' : '') + '</div>' +
-              (x.content ? '<div class="item-note">' + esc(x.content) + '</div>' : '') +
-              '</div>' + UI.ops(x.id, it.k === 'plan' ? 'pedit' : it.k === 'record' ? 'redit' : 'nedit', 'hdel') + '</div>';
+              studyContentHtml(x.content) +
+              '</div>' + UI.ops(x.id, it.k === 'plan' ? 'pedit' : 'redit', 'hdel') + '</div>';
           },
           acts: {
             pedit: function (t, e, redraw) { var it = items().filter(function (a) { return a.x && a.x.id === t.dataset.id; })[0]; if (it) editExamItem(it, redraw); },
             redit: function (t, e, redraw) { var it = items().filter(function (a) { return a.x && a.x.id === t.dataset.id; })[0]; if (it) editExamItem(it, redraw); },
-            nedit: function (t, e, redraw) { var it = items().filter(function (a) { return a.x && a.x.id === t.dataset.id; })[0]; if (it) editExamItem(it, redraw); },
             hdel: function (t, e, redraw) {
               var it = items().filter(function (a) { return a.x && a.x.id === t.dataset.id; })[0];
               if (!it) return;
-              UI.del(esc(it.k === 'plan' ? (it.x.text || '计划') : (it.x.title || '记录')), function () {
+              UI.del(esc(it.k === 'plan' ? (it.x.text || '计划') : (examCatText(it.x) || '记录')), function () {
                 if (it.k === 'plan') D().exam.plans = D().exam.plans.filter(function (a) { return a.id !== it.x.id; });
                 else if (it.k === 'record') D().exam.records = D().exam.records.filter(function (a) { return a.id !== it.x.id; });
-                else if (it.k === 'note') D().exam.notes = D().exam.notes.filter(function (a) { return a.id !== it.x.id; });
                 Store.save();
                 if (redraw) redraw();
               });
@@ -959,11 +1018,11 @@
   };
   /* 备考科目 / 内容分类筛选：多选回调（全部/固定/更多 复用全局 catPick 委托） */
   Cats.setPicker('examSubject', function () {
-    ListPager.resetPg('exam:plan'); ListPager.resetPg('exam:record'); ListPager.resetPg('exam:note');
+    ListPager.resetPg('exam:plan'); ListPager.resetPg('exam:record');
     App.refresh();
   });
   Cats.setPicker('examContent', function () {
-    ListPager.resetPg('exam:plan'); ListPager.resetPg('exam:record'); ListPager.resetPg('exam:note');
+    ListPager.resetPg('exam:plan'); ListPager.resetPg('exam:record');
     App.refresh();
   });
 

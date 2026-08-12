@@ -518,7 +518,7 @@
      12. 📌 任务待办（全功能）
   ========================================================= */
   var PRIO = { high: { t: '高', c: 'danger' }, mid: { t: '中', c: 'warn' }, low: { t: '低', c: 'grey' } };
-  var REPEAT = { none: '不重复', day: '每天', week: '每周', month: '每月' };
+  var REPEAT = { none: '不重复', day: '每天', week: '每周', month: '每月', custom: '自定义' };
   function taskDate(x) { return x.due || x.doneAt || x.created || ''; }
 
   /* 任务筛选态：待办 / 进行中 / 已完成 / 全部。逾期任务仍按「待办」展示，并在统计中标红。 */
@@ -542,7 +542,7 @@
       (x.status === 'doing' ? '<span class="badge info">进行中</span>' : '') +
       (x.tag ? '<span class="badge">#' + esc(x.tag) + '</span>' : '') +
       dueTag +
-      (x.repeat && x.repeat !== 'none' ? '<span class="badge grey">🔁 ' + REPEAT[x.repeat] + '</span>' : '') +
+      (x.repeat && x.repeat !== 'none' ? '<span class="badge grey">🔁 ' + (x.repeat === 'custom' ? '每 ' + (num(x.repeatN) || 1) + ' 天' : REPEAT[x.repeat]) + '</span>' : '') +
       (subs.length ? '<span class="badge grey">子任务 ' + sd + '/' + subs.length + '</span>' : '') +
       '</div>';
     var caret = '<span style="flex-shrink:0;color:#bbb;font-size:12px;margin-left:6px">' + (expanded ? '▾' : '▸') + '</span>';
@@ -568,12 +568,13 @@
       '</div></div>' + UI.ops(x.id, 'edit', 'del') + '</div>';
   }
 
-  function nextDue(due, rep) {
+  function nextDue(due, rep, n) {
     if (!due || rep === 'none' || !rep) return '';
     var d = U.parseDate(due);
     if (rep === 'day') d.setDate(d.getDate() + 1);
     if (rep === 'week') d.setDate(d.getDate() + 7);
     if (rep === 'month') d.setMonth(d.getMonth() + 1);
+    if (rep === 'custom') d.setDate(d.getDate() + (num(n) || 1));
     return d.getFullYear() + '-' + U.pad(d.getMonth() + 1) + '-' + U.pad(d.getDate());
   }
 
@@ -584,6 +585,7 @@
       { k: 'status', label: '状态', type: 'select', options: [{ v: 'todo', t: '待办' }, { v: 'doing', t: '进行中' }, { v: 'done', t: '已完成' }], def: 'todo' },
       { k: 'due', label: '截止日期', type: 'date' },
       { k: 'repeat', label: '重复周期', type: 'select', options: Object.keys(REPEAT).map(function (k) { return { v: k, t: REPEAT[k] }; }), def: 'none' },
+      { k: 'repeatN', label: '每隔几天', type: 'number', min: 1, def: 1, when: { key: 'repeat', val: 'custom' }, hint: '自定义重复：每 N 天重复一次' },
       Cats.field('taskTags', '分类标签', { k: 'tag' }),
       { k: 'desc', label: '备注说明', type: 'textarea', ph: '补充信息、执行思路…' }
     ];
@@ -727,7 +729,13 @@
 
     acts: {
       st: function (t) { App.setTab('tasks', 'st', t.dataset.k); ListPager.resetPg('tasks:list'); App.refresh(); },
-      texpand: function (t) { taskExp[t.dataset.id] = !taskExp[t.dataset.id]; App.refresh(); },
+      texpand: function (t) {
+        var id = t.dataset.id, was = !!taskExp[id];
+        if (!was) App.rememberScroll('exp:' + id);
+        taskExp[id] = !was;
+        App.refresh();
+        if (was) App.returnToScroll('exp:' + id);
+      },
       hist: function () {
         Hist.open({
           modId: 'tasks',
@@ -826,13 +834,13 @@
         if (x.status === 'done') { x.status = 'todo'; x.doneAt = ''; }
         else {
           x.status = 'done'; x.doneAt = U.today();
-          if (x.repeat && x.repeat !== 'none' && x.due) {
-            var nd = nextDue(x.due, x.repeat);
-            D().tasks.push({
-              id: U.uid(), title: x.title, desc: x.desc, prio: x.prio, tag: x.tag,
-              due: nd, repeat: x.repeat, status: 'todo', created: nd,
-              subs: (x.subs || []).map(function (s) { return { id: U.uid(), t: s.t, done: false }; })
-            });
+        if (x.repeat && x.repeat !== 'none' && x.due) {
+          var nd = nextDue(x.due, x.repeat, x.repeatN);
+          D().tasks.push({
+            id: U.uid(), title: x.title, desc: x.desc, prio: x.prio, tag: x.tag,
+            due: nd, repeat: x.repeat, repeatN: x.repeatN, status: 'todo', created: nd,
+            subs: (x.subs || []).map(function (s) { return { id: U.uid(), t: s.t, done: false }; })
+          });
             U.toast('已完成，下一周期任务已生成（' + U.fmtDate(nd) + '）');
           }
         }

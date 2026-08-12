@@ -155,11 +155,10 @@
 
       return UI.head('💰 财务记账', '账户 · 收支 · 存钱目标 · 统计分析') +
         UI.stats([
-          ['总资产', money(asset), true, U.moneyFull(asset)],
-          ['本月收入', money(inc), false, U.moneyFull(inc)],
-          ['本月支出', money(exp), false, U.moneyFull(exp)],
-          ['本月结余', money(inc - exp), false, U.moneyFull(inc - exp)]
-        ]) +
+          ['总资产', U.moneyFull(asset), true, U.moneyFull(asset)],
+          ['本月收入', U.moneyFull(inc), false, U.moneyFull(inc)],
+          ['本月支出', U.moneyFull(exp), true, U.moneyFull(exp), true]
+        ], 2) +
         UI.tabs([
           { k: 'flow', t: '收支记账', i: '🧾' }, { k: 'acc', t: '账户管理', i: '🏦' },
           { k: 'goal', t: '存钱目标', i: '🎯' }, { k: 'stat', t: '统计分析', i: '📊' }

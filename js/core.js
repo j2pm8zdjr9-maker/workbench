@@ -388,6 +388,18 @@
       window.scrollTo(0, y);
     },
 
+    /* 滚动锚定：展开/折叠等「就地展开」操作时，记住点开瞬间的滚动位置，
+       折叠后自动回到该位置，避免页面被内容高度变化带着往下漂。
+       用法：在点开（展开）时 rememberScroll(key)；在收起（折叠）时 returnToScroll(key)。 */
+    _opScroll: {},
+    rememberScroll: function (key) { this._opScroll[key] = window.scrollY; },
+    returnToScroll: function (key) {
+      var y = this._opScroll[key];
+      if (y == null) return;
+      this._opScroll[key] = null;
+      window.scrollTo(0, y);
+    },
+
     bindView: function (view, mod) {
       if (view._bound === mod.id) return;
       view._bound = mod.id;

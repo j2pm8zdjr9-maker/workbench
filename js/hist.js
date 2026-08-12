@@ -33,15 +33,19 @@
 
   var qMap = {};   // 搜索词
   var fMap = {};   // 额外筛选当前值
-  var fMap2 = {};  // 第二个额外筛选当前值（如任务分类）
+  var fMap2 = {};  // 第二个额外筛选当前值（如任务分类 / 科目）
+  var fMap3 = {};  // 第三个额外筛选当前值（如内容分类）
   var pgMap = {};  // 当前页
   var szMap = {};  // 每页条数
   var SIZES = [5, 10, 20, 50, 100];
   var hrKeyMap = {};   // 当前排序键（按 modId）
   var hrDirMap = {};   // 当前排序方向 'desc' | 'asc'
   var instances = {};  // 已打开弹窗实例（modId -> {extraEl, renderExtra, redraw}）
+  var moreState = {};  // 分类胶囊「更多」展开态（key = modId + '|' + bar）
   function getF2(m) { return fMap2[m] || ''; }
   function setF2(m, v) { fMap2[m] = v; }
+  function getF3(m) { return fMap3[m] || ''; }
+  function setF3(m, v) { fMap3[m] = v; }
   function getKey(m) { return hrKeyMap[m] || ''; }
   function setKey(m, v) { hrKeyMap[m] = v; }
   function getDir(m) { return hrDirMap[m] || 'desc'; }
@@ -74,6 +78,7 @@
 
     function renderExtra() { return cfg.extraBar ? cfg.extraBar(getF(modId)) : ''; }
     function renderExtra2() { return cfg.extraBar2 ? cfg.extraBar2(getF2(modId)) : ''; }
+    function renderExtra3() { return cfg.extraBar3 ? cfg.extraBar3(getF3(modId)) : ''; }
 
     function renderSort() {
       if (!cfg.sortKeys || !cfg.sortKeys.length) return '';
@@ -94,6 +99,7 @@
         if (q && cfg.match && !cfg.match(it, q)) return false;
         if (cfg.extraMatch && !cfg.extraMatch(it, getF(modId))) return false;
         if (cfg.extraMatch2 && !cfg.extraMatch2(it, getF2(modId))) return false;
+        if (cfg.extraMatch3 && !cfg.extraMatch3(it, getF3(modId))) return false;
         return true;
       });
     }
@@ -104,6 +110,7 @@
       (cfg.search === false ? '' : '<div style="height:12px"></div><input class="input hist-search" id="histQ-' + modId + '" placeholder="' + esc(cfg.searchPh || '🔍 搜索…') + '" value="' + esc(getQ(modId)) + '">') +
       (cfg.extraBar ? '<div style="height:10px"></div><div id="histExtra-' + modId + '">' + renderExtra() + '</div>' : '') +
       (cfg.extraBar2 ? '<div style="height:10px"></div><div id="histExtra2-' + modId + '">' + renderExtra2() + '</div>' : '') +
+      (cfg.extraBar3 ? '<div style="height:10px"></div><div id="histExtra3-' + modId + '">' + renderExtra3() + '</div>' : '') +
       '<div id="histSort-' + modId + '">' + renderSort() + '</div>' +
       (cfg.summary ? '<div id="histSum-' + modId + '" style="margin-top:12px"></div>' : '') +
       '<div style="height:14px"></div>' +
@@ -118,9 +125,10 @@
     var qe = el.querySelector('#histQ-' + modId);
     var extraEl = cfg.extraBar ? el.querySelector('#histExtra-' + modId) : null;
     var extraEl2 = cfg.extraBar2 ? el.querySelector('#histExtra2-' + modId) : null;
+    var extraEl3 = cfg.extraBar3 ? el.querySelector('#histExtra3-' + modId) : null;
     var sumEl = cfg.summary ? el.querySelector('#histSum-' + modId) : null;
     var pagerEl = cfg.pager ? el.querySelector('#histPager-' + modId) : null;
-    instances[modId] = { extraEl: extraEl, renderExtra: renderExtra, redraw: draw };
+    instances[modId] = { extraEl: extraEl, extraEl2: extraEl2, extraEl3: extraEl3, renderExtra: renderExtra, renderExtra2: renderExtra2, renderExtra3: renderExtra3, redraw: draw };
 
     function renderTf() { tfEl.innerHTML = TF.btn(modId); }
 
@@ -197,6 +205,22 @@
         setPg(modId, 1); draw();
         return;
       }
+      if (act === 'histFilter3') {
+        e.preventDefault();
+        setF3(modId, t.dataset.k);
+        if (extraEl3) extraEl3.innerHTML = renderExtra3();
+        setPg(modId, 1); draw();
+        return;
+      }
+      /* 分类胶囊「更多 ▾」：切换展开/收起（受分类管理显示个数控制） */
+      if (act === 'histCatMore') {
+        e.preventDefault();
+        var mb = t.dataset.bar, mk = modId + '|' + mb;
+        moreState[mk] = !moreState[mk];
+        if (mb === '2' && extraEl2) extraEl2.innerHTML = renderExtra2();
+        if (mb === '3' && extraEl3) extraEl3.innerHTML = renderExtra3();
+        return;
+      }
       /* 第二个筛选条用「分类管理」灵活胶囊：固定分类 + 更多（打开选择器） */
       if (cfg.extraNs2 && t.dataset.act === 'catPick' && t.dataset.ns === cfg.extraNs2) {
         e.preventDefault();
@@ -236,8 +260,31 @@
     return el;
   }
 
+  /* 分类胶囊（受分类管理显示个数控制）：直接显示前 N-1 个固定分类，其余收进「更多 ▾」。
+     单击胶囊为单选（与备考历史「科目 / 内容」场景匹配）。ns 命名空间，bar 为第几个筛选条。 */
+  function catPills(ns, cur, act, bar, modId, label) {
+    var all = w.Cats.get(ns);
+    if (!all.length) return '';
+    var pin = w.Cats.pin(ns);
+    var fixedN = Math.max(0, pin - 1);
+    var pinned = all.slice(0, fixedN), rest = all.slice(fixedN);
+    var open = moreState[modId + '|' + bar];
+    var html = '<button class="pill tap' + (!cur ? ' on' : '') + '" data-act="' + act + '" data-k="">全部</button>';
+    html += pinned.map(function (c) {
+      return '<button class="pill tap' + (cur === c ? ' on' : '') + '" data-act="' + act + '" data-k="' + esc(c) + '">' + esc(c) + '</button>';
+    }).join('');
+    if (rest.length) {
+      html += '<button class="pill tap' + (open ? ' on' : '') + '" data-act="histCatMore" data-bar="' + bar + '" data-ns="' + ns + '">' + (open ? '收起 ▴' : '更多 ▾') + '</button>';
+      if (open) html += rest.map(function (c) {
+        return '<button class="pill tap' + (cur === c ? ' on' : '') + '" data-act="' + act + '" data-k="' + esc(c) + '">' + esc(c) + '</button>';
+      }).join('');
+    }
+    return '<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 4px"><span class="small muted">' + esc(label) + '</span>' + html + '</div>';
+  }
+
   w.Hist = {
     open: open,
+    catPills: catPills,
     getFilter: function (m) { return fMap[m] || ''; },
     setFilter: function (m, v) {
       setF(m, v);
